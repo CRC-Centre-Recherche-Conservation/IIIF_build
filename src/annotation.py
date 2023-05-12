@@ -13,16 +13,19 @@ class FormSVG:
         img = Image.open(BytesIO(response.content))
         return img.size
 
-    def get_dim_manifest(manifest: str, img_url: str) -> namedtuple:
+    def get_dim_manifest(self, img_url: str) -> namedtuple:
         Size = namedtuple('Size', ['w', 'h'])
 
-        json = requests.get(url).json()
+        json = requests.get(self.url).json()
 
         for page in json['sequences'][0]['canvases']:
             if page['images'][0]['resource']['@id'] == img_url:
                 return Size(h=page['images'][0]['resource']['height'], w=page['images'][0]['resource']['width'])
 
     def fit(self):
+        pass
+
+    def export_annotation(self):
         pass
 
 
