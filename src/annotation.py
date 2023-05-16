@@ -6,17 +6,25 @@ from io import BytesIO
 
 class FormSVG:
     def __init__(self, debug: bool = False):
+        self.debug = debug
         pass
 
+    @staticmethod
     def get_dim_request(url):
+        """
+        To get
+        :param url:
+        :return:
+        """
         response = requests.get(url)
         img = Image.open(BytesIO(response.content))
         return img.size
 
-    def get_dim_manifest(self, img_url: str) -> namedtuple:
+    @staticmethod
+    def get_dim_manifest(img_url: str) -> namedtuple:
         Size = namedtuple('Size', ['w', 'h'])
 
-        json = requests.get(self.url).json()
+        json = requests.get(img_url).json()
 
         for page in json['sequences'][0]['canvases']:
             if page['images'][0]['resource']['@id'] == img_url:
@@ -31,10 +39,14 @@ class FormSVG:
 
 class Rectangle(FormSVG):
     def __init__(self, x, y, w, h):
+        super().__init__()
         self.x = x
         self.y = y
         self.w = w
         self.h = h
+
+    def find_dimension(self):
+        pass
 
     @staticmethod
     def get_dimension_image(width, height) -> tuple:
