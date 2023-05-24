@@ -1,9 +1,10 @@
 import click
 import pandas as pd
 
-from src.opt.variables import USEFULL_CSV
+from src.data import DataAnnotations
+from src.iiif import Annotation
+from src.forms import Rectangle
 
-from src.annotation import Rectangle
 
 # https://gitlab.huma-num.fr/jpressac/niiif-niiif
 
@@ -17,9 +18,11 @@ from src.annotation import Rectangle
 
 @click.command()
 def build_manifest():
-    df = pd.read_csv("data/ms59_annotation_iiif.csv", delimiter=";")
-    df = df.drop(columns=USEFULL_CSV)
-    df.groupby('Reference.1')['Name'].apply(list)
+    data = DataAnnotations("data/ms59_annotation_iiif.csv", delimiter=";")
+    row = data.get_row('Mvis_03')
+    annotation = Annotation.data_annotation(row=row)
+    for uri in data:
+        print(uri)
 
 
 if __name__ == "__main__":
