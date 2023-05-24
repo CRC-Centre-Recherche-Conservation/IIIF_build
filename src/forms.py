@@ -5,8 +5,9 @@ from io import BytesIO
 
 
 class FormSVG:
-    def __init__(self, debug: bool = False):
+    def __init__(self, debug: bool = False, verbose=False):
         self.debug = debug
+        self.verbose = verbose
         pass
 
     @staticmethod
@@ -38,8 +39,8 @@ class FormSVG:
 
 
 class Rectangle(FormSVG):
-    def __init__(self, x, y, w, h):
-        super().__init__()
+    def __init__(self, x, y, w, h, **kwargs):
+        super().__init__(debug=kwargs['debug'], verbose=kwargs['verbose'])
         self.x = x
         self.y = y
         self.w = w
@@ -56,13 +57,17 @@ class Rectangle(FormSVG):
         ratio = width / height
         return ratio
 
-    def fit(self, image):
+    def fit(self):
         pass
 
 
 class Marker(FormSVG):
-    def __init__(self, debug: bool = False):
-        pass
+    def __init__(self, x, y, w, h, **kwargs ):
+        super().__init__(debug=kwargs['debug'], verbose=kwargs['verbose'])
+        self.x = x
+        self.y = y
+        self.w = w
+        self.h = h
 
     @staticmethod
     def get_dimension_image(x, y):
