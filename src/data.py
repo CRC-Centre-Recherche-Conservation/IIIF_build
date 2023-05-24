@@ -23,19 +23,24 @@ class DataAnnotations:
         self._file_annotations(self.df)
 
     def __len__(self):
-        return len(self.annotations)
+        return self.annotations
+
+    def __getitem__(self, item):
+        return self.annotations[item]
+
+    def __repr__(self):
+        """
+        :return: str, class representation
+        """
+        return str(self.annotations)
 
     def __iter__(self):
+        """
+        iterate on dict with generators
+        :return: Tuples
+        """
         self.n = 0
-        return self
-
-    def __next__(self):
-        if self.n <= self.__len__():
-            self.n += 1
-            for annotation in self.annotations:
-                return annotation, self.annotations[annotation]
-        else:
-            raise StopIteration
+        yield from self.annotations.items()
 
     def _file_annotations(self, df: pd.DataFrame):
         regroup = df.groupby('Reference.1')['Name'].apply(list)
@@ -51,6 +56,6 @@ class DataAnnotations:
         if n > 1:
             raise ValueError(f"You have {str(n)} columns with empty cells. You need to check your file.")
 
-    def get_row(self, _id: str) -> pd.DataFrame:
-        return self.df[self.df['Name'] == _id]
+    def get_row(self, uri: str, _id: str) -> pd.DataFrame:
+        return self.df.loc[(self.df['Name'] == _id) & (self.df['Reference.1'] == uri)]
 
