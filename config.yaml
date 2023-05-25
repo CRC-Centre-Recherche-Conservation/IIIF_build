@@ -1,0 +1,30 @@
+label: TITLE or DEFAULT
+description: STR or None
+
+Institution:
+    - label: TITLE or DEFAULT
+      homepage: HOMEPAGE
+    
+metadata:
+    data-source:
+        - url: URL or None
+        - url: URL1 or None
+    technique:
+        - label: STR or None
+        - label: STR1 or None
+    
+
+authors:
+  - name: YOUR_NAME or None
+    forename: YOUR FORENAME or None
+    role: YOUR_ROLE or None
+  - name: YOUR_NAME1 or None
+    forename: YOUR FORENAME or None
+    role: YOUR_ROLE1 or None
+    
+licence:
+  label: TITLE or DEFAULT
+  attribution: STR or HTML or None
+  link: URL
+    
+

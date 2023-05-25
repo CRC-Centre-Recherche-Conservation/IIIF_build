@@ -59,3 +59,6 @@ class DataAnnotations:
     def get_row(self, uri: str, _id: str) -> pd.DataFrame:
         return self.df.loc[(self.df['Name'] == _id) & (self.df['Reference.1'] == uri)]
 
+    def get_uri(self):
+        return [annotation[0] for annotation in self.annotations]
+

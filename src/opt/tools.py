@@ -1,1 +1,0 @@
-# function pour lire manifest

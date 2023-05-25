@@ -1,0 +1,32 @@
+label: MS 59 Avranches - analyses physico-chimique @CRC
+description: test bidule
+
+Institution:
+  - label: Centre de la Recherche sur la Conservations
+    homepage: https://crc.mnhn.fr/fr
+  - label: Museum nationale d'Histoire Naturelle
+  - label: Centre de la Recherche sur la Conservation
+    homepage: https://www.cnrs.fr/fr
+    
+metadata:
+    data-source:
+      - url: https://doi.org/10.48579/PRO/CM1FLM
+    technique:
+      - label: XRF
+      - label: Hyperspecral
+    
+
+authors:
+  - name: Michelin
+    forename: Anne
+    role: Maîtresse de conférence
+  - name: Robinet
+    forename: Laurianne
+    role: Ingénieur de recherche
+    
+licence:
+  label: Etalab 2.0
+  attribution: STR or HTML
+  link: https://spdx.org/licenses/etalab-2.0.html
+  logo: https://www.etalab.gouv.fr/wp-content/uploads/2011/10/licence-ouverte-open-licence.gif
+
