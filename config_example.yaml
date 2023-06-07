@@ -27,7 +27,7 @@ authors:
     
 licence:
   label: Etalab 2.0
-  attribution: STR or HTML
+  attribution: <span>Centre de la Recherche sur la Conservation. <a href=\"https://spdx.org/licenses/etalab-2.0.html\">OPEN LICENCE 2.0</a> <a href=\"https://spdx.org/licenses/etalab-2.0.html\" title\"Etalab 2.0\"><img src=\"https://www.etalab.gouv.fr/wp-content/uploads/2011/10/licence-ouverte-open-licence.gif\"/></a></span>
   link: https://spdx.org/licenses/etalab-2.0.html
   logo: https://www.etalab.gouv.fr/wp-content/uploads/2011/10/licence-ouverte-open-licence.gif
 

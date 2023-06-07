@@ -62,5 +62,5 @@ IMPORTANT_COLUMNS = [
  "Resolution"
 ]
 
-URI_CRC = "https://data.crc.fr/manifests/"
+URI_CRC = "https://data.crc.fr/iiif/"
 
