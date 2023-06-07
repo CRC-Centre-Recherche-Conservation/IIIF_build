@@ -3,7 +3,7 @@ description: STR or None
 
 Institution:
     - label: TITLE or DEFAULT
-      homepage: HOMEPAGE
+      homepage: DEFAULT or None
     
 metadata:
     data-source:
@@ -25,6 +25,6 @@ authors:
 licence:
   label: TITLE or DEFAULT
   attribution: STR or HTML or None
-  link: URL
+  link: URL or None
     
 

@@ -5,6 +5,7 @@ Institution:
   - label: Centre de la Recherche sur la Conservations
     homepage: https://crc.mnhn.fr/fr
   - label: Museum nationale d'Histoire Naturelle
+    homepage: None
   - label: Centre de la Recherche sur la Conservation
     homepage: https://www.cnrs.fr/fr
     
@@ -21,7 +22,7 @@ authors:
     forename: Anne
     role: Maîtresse de conférence
   - name: Robinet
-    forename: Laurianne
+    forename: None
     role: Ingénieur de recherche
     
 licence:

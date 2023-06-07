@@ -29,10 +29,11 @@ class IIIF(object):
 
 class ManifestIIIF(IIIF):
     rights = ['Etalab 2.0', "https://spdx.org/licenses/etalab-2.0.html"]
-    homepage = "https://crc.mnhn.fr/fr"
+    institution = [("Centre de la Recherche sur la Conservation", "https://crc.mnhn.fr/fr")]
     requiredStatement = KeyValueString(label="Attribution", value="<span>Centre de la Recherche sur la Conservation. <a href=\"https://spdx.org/licenses/etalab-2.0.html\">OPEN LICENCE 2.0</a> <a href=\"https://spdx.org/licenses/etalab-2.0.html\" title\"Etalab 2.0\"><img src=\"https://www.etalab.gouv.fr/wp-content/uploads/2011/10/licence-ouverte-open-licence.gif\"/></a></span>")
-    description = None
-    metadata = []
+    description = 'None'
+    metadata = ([], [])
+    authors = None
 
     def __init__(self, uri, **kwargs):
         super().__init__(
@@ -48,19 +49,75 @@ class ManifestIIIF(IIIF):
     def get_preconfig(self, filename):
         with open(filename) as f:
             config_yaml = yaml.load(f, Loader=SafeLoader)
+
+            # Label
             if config_yaml['label'].upper() != "DEFAULT":
                 self.label = config_yaml['label']
                 print(self.label)
-            if config_yaml['description'] != 'None':
+
+            # Description
+            if config_yaml['description'].upper() != 'NONE':
                 self.description = config_yaml['description']
                 print(self.description)
+
+            # Licence
             if config_yaml['licence']['label'] != 'DEFAULT':
                 self.rights[0] = config_yaml['licence']['label']
                 # https link is better but well ...
-                if config_yaml['licence']['link'].startswith('http'):
+                if config_yaml['licence']['link'].startswith('http') and config_yaml['licence']['link'] is not None:
                     self.rights[1] = config_yaml['licence']['link']
                 else:
                     raise ValueError("You need to indicate an URI of your licence. Need to start by http or https protocols")
+            print(self.rights[0], self.rights[1])
+
+            # Institution
+            if len(config_yaml['Institution']) > 1:
+                self.institution.pop(0)
+                for i in config_yaml['Institution']:
+                    if i['label'].upper() != "DEFAULT":
+                        label = i['label']
+                    if i['homepage'].upper() != "DEFAULT":
+                        if i['homepage'].startswith('http'):
+                            homepage = i['homepage']
+                        elif i['homepage'].upper() == "NONE":
+                            homepage = 'n.c.'
+                        else:
+                            raise ValueError(i['homepage'],
+                                "You need to indicate a web link of your homepage. Need to start by http or https protocols")
+                    self.institution.append((label, homepage))
+            else:
+                if config_yaml['Institution'][0]['label'].upper() != "DEFAULT":
+                    label = config_yaml['Institution'][0]['label']
+                if config_yaml['Institution'][0]['homepage'].upper() != "DEFAULT":
+                    if config_yaml['Institution'][0]['homepage'].startswith('http'):
+                        homepage = config_yaml['Institution'][0]['homepage']
+                    elif config_yaml['Institution'][0]['homepage'].upper() == "NONE":
+                        homepage = 'n.c.'
+                    else:
+                        raise ValueError(config_yaml['Institution'][0]['homepage'],
+                            "You need to indicate a web link of your homepage. Need to start by http or https protocols")
+                self.institution[0] = (str(label), str(homepage))
+            print(self.institution)
+
+            # Metadata
+            for data in config_yaml['metadata']['data-source']:
+                if data['url'] is not None:
+                    self.metadata[0].append(data['url'])
+            for technique in config_yaml['metadata']['technique']:
+                if technique['label'] is not None:
+                    self.metadata[1].append(technique['label'])
+            print(self.metadata)
+
+            # Authors
+            self.authors = [(author['name'] if author['name'].upper() != 'NONE' else 'n.c.',
+                             author['forename'] if author['forename'].upper() != 'NONE' else 'n.c.',
+                             author['role']if author['role'].upper() != 'NONE' else 'n.c.')
+                            for author in config_yaml['authors']]
+            print(self.authors)
+
+
+
+
 
 
 
