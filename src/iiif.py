@@ -2,19 +2,21 @@ import pandas as pd
 import requests
 import yaml
 from yaml.loader import SafeLoader
-from iiif_prezi3 import Manifest, KeyValueString, config, ExternalItem, ResourceItem
+from iiif_prezi3 import Manifest, KeyValueString, config, ExternalItem, ResourceItem, Annotation
 
-from src.opt.variables import URI_CRC
+from src.opt.variables import URI_CRC, SCHEME_DATA_ANNOTATION
+from forms import Rectangle, Marker
 
 
 # peut etre un decorateur pour faire une recuperation spetiale du code json ?
 # https://iiif-prezi.github.io/iiif-prezi3/recipes/0019-html-in-annotations/
+# https://github.com/dasch-swiss/daschiiify/blob/main/test/daschiiify-alpha.py
 
 # strategie on prend le manifest initiale et on le reconstruir depuis zero
 
 class IIIF(object):
-    canvas = {}
-    manifest = {}
+    canvases = {}
+    manifest = Manifest
 
     def __init__(self, uri, **kwargs):
         self.uri = uri
@@ -30,7 +32,7 @@ class IIIF(object):
     def get_canvas(self, url_image: list):
         for canvas in self.json['sequences'][0]['canvases']:
             if canvas['images'][0]['resource']['@id'] == url_image:
-                self.canvas[canvas['images'][0]['resource']['@id']] = canvas
+                self.canvases[canvas['images'][0]['resource']['@id']] = canvas
 
 
 class ManifestIIIF(IIIF):
@@ -45,6 +47,9 @@ class ManifestIIIF(IIIF):
         super().__init__(
             uri=uri, **kwargs)
         self.label = self._build_label()
+
+    def _print_json(self):
+        return self.manifest.json(indent=2, ensure_ascii=False)
 
     def _build_label(self):
         return self.json['label'] + ", analyses physico-chimique @CRC"
@@ -125,8 +130,6 @@ class ManifestIIIF(IIIF):
 
         if len(self.metadata) < 1:
             self.metadata = None
-
-        # https://github.com/dasch-swiss/daschiiify/blob/main/test/daschiiify-alpha.py
         self.manifest = Manifest(
             id=self.server + 'manifests/' + self.uri.split('/')[-1],
             label=self.label,
@@ -140,8 +143,8 @@ class ManifestIIIF(IIIF):
         )
 
     def build_thumbnail(self):
-        canvas_1 = list(self.canvas.keys())[0]
-        canvas_1 = self.canvas[canvas_1]
+        canvas_1 = list(self.canvases.keys())[0]
+        canvas_1 = self.canvases[canvas_1]
 
         thumbnail = ResourceItem(id=canvas_1['images'][0]['resource']['@id'],
                                  type="Image",
@@ -155,9 +158,11 @@ class ManifestIIIF(IIIF):
 
         self.manifest.thumbnail = [thumbnail]
 
+    def add_canvas(self, canvas):
+        pass
 
 
-class CanvasIIIF(IIIF):
+class CanvasIIIF:
     pass
 
 
@@ -169,23 +174,48 @@ class SequenceIIIF(IIIF):
         pass
 
 
-class Annotation(IIIF):
-    scheme = {
-        'Name': str,
-        'Tags': list,
-        'Dimensions': {
-            'width': int,
-            'height': int,
-        },
-        'Identifier': str,
-        'Coordinates':
-            {'x': float, 'y': float, 'w': float, 'h': float},
-        'Value': str,
-        'URI': str
-    }
+class AnnotationIIIF:
+    resize = False
+
+    #self init:
+    #annotationPage = AnnotationPage(id=anno_page_id) -> creer un id pour la page en automatique
+    #ajouter l'annotation dans la page annotationPage.add_item(annotation)
+    #canvas.add_item(annotationPage)
+
+    #make_annotation()
+
+    def check_dimension(self, data_anno: SCHEME_DATA_ANNOTATION, canvas):
+        if data_anno['Dimensions']['width'] != canvas['images'][0]['resource']['width']:
+            self.resize = True
+        elif data_anno['Dimensions']['height'] != canvas['images'][0]['resource']['height']:
+            self.resize = True
+
+    def make_annotation(self):
+        if self.resize:
+            pass
+        else:
+            pass
+
+
+    def make_forms(self, data_anno: SCHEME_DATA_ANNOTATION):
+        if isinstance(data_anno['Type'], str):
+            if data_anno['Type'].upper() == 'RECTANGLE':
+                pass
+            elif data_anno['Type'].upper() == 'MARKER':
+                pass
+            else:
+                raise ValueError("The data annotation type need to be 'rectangle' or 'marker'")
+        else:
+            raise TypeError('The data annotation type need to be string.')
+
 
     @classmethod
-    def data_annotation(cls, row: pd.DataFrame):
+    def data_annotation(cls, row: pd.DataFrame) -> SCHEME_DATA_ANNOTATION:
+        """
+        Function to get data and build annotation object
+        :param row:
+        :return:
+        """
         try:
             tags = [tag.strip() for tag in row['Tags'].values[0].split(',')]
         except (IndexError, AttributeError) as err:
@@ -194,18 +224,20 @@ class Annotation(IIIF):
             pass
         try:
             return {
-                'Name': row['Name'].values[0],
-                'Tags': tags,
-                'Dimensions': {
-                    'width': row['Dimensions'].values[0].split('x')[0].strip(),
-                    'height': row['Dimensions'].values[0].split('x')[1].strip(),
-                },
-                'Identifier': row['Identifier'].values[0],
-                'Coordinates':
-                    {'x': row['X'].values[0], 'y': row['Y'].values[0], 'w': row['W'].values[0],
-                     'h': row['H'].values[0]},
-                'Value': row['Value'].values[0],
-                'URI': row['Reference.1'].values[0]
-            }
+                        'Name': row['Name'].values[0],
+                        'Type': row['Type'].values[0],
+                        'Tags': tags,
+                        'Dimensions': {
+                            'width': row['Dimensions'].values[0].split('x')[0].strip(),
+                            'height': row['Dimensions'].values[0].split('x')[1].strip(),
+                        },
+                        'Identifier': row['Identifier'].values[0],
+                        'Coordinates':
+                            {'x': row['X'].values[0], 'y': row['Y'].values[0], 'w': row['W'].values[0],
+                             'h': row['H'].values[0]},
+                        'Value': row['Value'].values[0],
+                        'URI': row['Reference.1'].values[0]
+                    }
         except Exception as err:
             print(err)
+

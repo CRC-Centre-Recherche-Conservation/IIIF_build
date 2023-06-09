@@ -1,9 +1,7 @@
 import click
-import pandas as pd
 
 from src.data import DataAnnotations
-from src.iiif import Annotation, ManifestIIIF, IIIF
-from src.forms import Rectangle
+from src.iiif import Annotation, ManifestIIIF
 from src.opt.data_variables import LANGUAGES
 from src.opt.variables import URI_CRC
 
@@ -21,7 +19,8 @@ from src.opt.variables import URI_CRC
 @click.command()
 @click.option("--config", "config", type=click.Path(exists=True, dir_okay=False, file_okay=True),
               help="To get the YAML file configuration.")
-@click.option("-l", "--language", "language", type=click.Choice(LANGUAGES), multiple=False, default='fr', help="Choose your languages manifest with ISO 639-1.")
+@click.option("-l", "--language", "language", type=click.Choice(LANGUAGES), multiple=False, default='fr',
+              help="Choose your languages manifest with ISO 639-1.")
 @click.option("--server", type=str, default=URI_CRC, help="Put the schema, the authority and the path part of the URI of your server. For example, if you want a manifest in this address : https://data.crc.fr/iiif/manifests/ms_59_Avranches.json \
                                                                           you need to inquire the url : https://data.crc.fr/iiif/. The path manifests is automaticaly adding by the script.")
 def build_manifest(**kwargs):
@@ -36,10 +35,15 @@ def build_manifest(**kwargs):
     for uri, values in data:
         for value in values:
             row = data.get_row(uri, value)
-            annotation = Annotation.data_annotation(row=row)
+            csv_anno = Annotation.data_annotation(row=row)
+
             manifest.get_canvas(uri)
+
+    """for canvas in manifest.canvases:
+        manifest.manifes"""
+
     manifest.build_thumbnail()
-    manifest.
+    print(manifest._print_json())
 
 
 if __name__ == "__main__":

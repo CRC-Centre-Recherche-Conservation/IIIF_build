@@ -1,3 +1,27 @@
+#### LINKS ####
+
+URI_CRC = "https://data.crc.fr/iiif/"
+
+
+#### FORMAT ####
+
+SCHEME_DATA_ANNOTATION = {
+        'Name': str,
+        'Type': str,
+        'Tags': list,
+        'Dimensions': {
+            'width': int,
+            'height': int,
+        },
+        'Identifier': str,
+        'Coordinates':
+            {'x': float, 'y': float, 'w': float, 'h': float},
+        'Value': str,
+        'URI': str
+    }
+
+
+#### CSV ####
 USEFULL_CSV = ['Basis of Record',
  'Catalog Number',
  'Collection Code',
@@ -62,5 +86,5 @@ IMPORTANT_COLUMNS = [
  "Resolution"
 ]
 
-URI_CRC = "https://data.crc.fr/iiif/"
+
 
