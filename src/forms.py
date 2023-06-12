@@ -15,7 +15,14 @@ class FormSVG(object):
     ratio = None
     dim_img_origin = None
 
-    def __init__(self, _id: str, type: str, image_url: str, debug: bool = False, **kwargs):
+    def __init__(self, _id: str, type: str, image_url: str, **kwargs):
+        """
+        General initalisation of form class to svg.
+        :param _id: Id of your annotation.
+        :param type: Type of analysis in your annotation
+        :param image_url: URI of API image
+        :param kwargs: verbose
+        """
         self.redimension = False
         if image_url.startswith('https://') or image_url.startswith('http://'):
             # col 'Name' in csv
@@ -24,11 +31,11 @@ class FormSVG(object):
             self.type = type
             # col References -> API image
             self.image_url = image_url
+            # tuple (width, height)
+            self.image_size = self._get_dim_img()
 
             # Other
-            self.debug = debug
-            self.verbose = kwargs['verbose']
-            self.image_size = self.get_dim_img()
+            self.verbose = kwargs.get('verbose', False)
         else:
             raise ValueError("You need to indicate an URI of your licence. Need to start by http or https protocols")
 
@@ -45,9 +52,14 @@ class FormSVG(object):
         """
         if statut is True:
             self._redimension = True
-            self.ratio = self.get_ratio(self.dim_img_origin[0], self.dim_img_origin[1])
+            if self.dim_img_origin is None:
+                raise ValueError("Attribute class 'dim_img_origin' don't to be none value ")
+            else:
+                if self.verbose:
+                    print(f'Redimension of image {str(self.id)}')
+                self.ratio = self._get_ratio(self.dim_img_origin[0], self.dim_img_origin[1])
 
-    def get_dim_img(self) -> namedtuple:
+    def _get_dim_img(self) -> namedtuple:
         """
         To get image API dimension
         :param url: str, url image
@@ -57,32 +69,7 @@ class FormSVG(object):
         img = Image.open(BytesIO(response.content))
         return img.size[0], img.size[1]
 
-    def get_dim_manifest(self, _json, img_w: int or float, img_h: int or float) -> None or tuple:
-        """
-        To get dimension of original image.
-        :param _json: the json request of your manifest iiif
-        :param img_h: height image's
-        :param img_w: width image's
-        :return: Bool, tuple(width, height) or None. The boolean is to change
-        """
-
-        img_manifest = None
-        Size = namedtuple('Size', ['w', 'h'])
-
-        for page in _json['sequences'][0]['canvases']:
-            if page['images'][0]['resource']['@id'] == self.image_url:
-                img_manifest = Size(h=page['images'][0]['resource']['height'], w=page['images'][0]['resource']['width'])
-
-        assert isinstance(img_manifest,
-                          Size), "We can't get the dimension of the canvas of original image in the manifest."
-
-        if img_w != img_manifest.w or img_h != img_manifest.h:
-            self.redimension = True
-            return img_manifest.w, img_manifest.h
-        else:
-            return None
-
-    def get_ratio(self, width: float or int, height: float or int) -> float or int:
+    def _get_ratio(self, width: float or int, height: float or int) -> float or int:
         """
         Get dimension ratio of original image in manifest
         :param width:
@@ -96,6 +83,29 @@ class FormSVG(object):
         ratio_w = width / self.image_size[0]
         ratio_h = height / self.image_size[1]
         return ratio_w, ratio_h
+
+    def get_dim_manifest(self, _json):
+        """
+        To get dimension of original image.
+        :param _json: the json request of your manifest iiif
+        :return: Nothing
+        """
+
+        img_manifest = None
+        Size = namedtuple('Size', ['w', 'h'])
+
+        for page in _json['sequences'][0]['canvases']:
+            if page['images'][0]['resource']['@id'] == self.image_url:
+                img_manifest = Size(h=page['images'][0]['resource']['height'], w=page['images'][0]['resource']['width'])
+
+        assert isinstance(img_manifest,
+                          Size), "We can't get the dimension of the canvas of original image in the manifest."
+
+        if self.image_size[0] != img_manifest.w or self.image_size[1] != img_manifest.h:
+            # get tuple with original dimension
+            self.dim_img_origin = (img_manifest.w, img_manifest.h)
+            # Indication of change status -> run property function
+            self.redimension = True
 
     def get_colors(self, list_colors: dict):
         """
@@ -129,6 +139,17 @@ class FormSVG(object):
 
 class Rectangle(FormSVG):
     def __init__(self, _id, image_url, _type, x, y, w, h, **kwargs):
+        """
+        class for rectangle form.
+        :param _id: Id of your annotation.
+        :param _type: Type of analysis in your annotation
+        :param image_url: URI of API image
+        :param x: coordinate x
+        :param y: coordinate y
+        :param w: coordinate w (width)
+        :param h: coordinate w (height)
+        :param kwargs: verbose (boolean, default is false)
+        """
         super().__init__(_id=_id, image_url=image_url, type=_type, **kwargs)
         self.x = x
         self.y = y
@@ -136,6 +157,10 @@ class Rectangle(FormSVG):
         self.h = h
 
     def fit(self):
+        """
+        to build svg object in html with the data of your annotation.
+        :return: str, html <rect>
+        """
         if self.redimension is False:
             assert isinstance(self.ratio, tuple), "Ratio attribute is None. You need to get a tuple (width, height)"
             self.x *= self.ratio[0]
@@ -147,6 +172,15 @@ class Rectangle(FormSVG):
 
 class Marker(FormSVG):
     def __init__(self, _id, image_url, _type, x, y, **kwargs):
+        """
+        class for marker form.
+        :param _id: Id of your annotation.
+        :param _type: Type of analysis in your annotation
+        :param image_url: URI of API image
+        :param x: coordinate x
+        :param y: coordinate y
+        :param kwargs: verbose (boolean, default is false)
+        """
         super().__init__(_id=_id, image_url=image_url, type=_type, **kwargs)
         self.x = x
         self.y = y
@@ -154,8 +188,14 @@ class Marker(FormSVG):
         self.h = 5
 
     def fit(self):
+        """
+        to build svg object in html with the data of your annotation.
+        :return: str, html <path>
+        """
         if self.redimension is False:
             assert isinstance(self.ratio, tuple), "Ratio attribute is None. You need to get a tuple (width, height)"
             self.x *= self.ratio[0]
             self.y *= self.ratio[1]
+            if self.verbose:
+                print()
         return f"""<path d="M{str(self.x)},{str(self.y)}c0,-3.0303 1.51515,-6.06061 4.54545,-9.09091c0,-2.51039 -2.03507,-4.54545 -4.54545,-4.54545c-2.51039,0 -4.54545,2.03507 -4.54545,4.54545c3.0303,3.0303 4.54545,6.06061 4.54545,9.09091z" id="{self.id}" fill-opacity="0" fill="#00f000" stroke="{str("color")}" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="10"/>"""
