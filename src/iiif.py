@@ -5,14 +5,12 @@ from yaml.loader import SafeLoader
 from iiif_prezi3 import Manifest, KeyValueString, config, ExternalItem, ResourceItem, Annotation
 
 from src.opt.variables import URI_CRC, SCHEME_DATA_ANNOTATION
-from forms import Rectangle, Marker
+from .forms import Rectangle, Marker
 
 
-# peut etre un decorateur pour faire une recuperation spetiale du code json ?
 # https://iiif-prezi.github.io/iiif-prezi3/recipes/0019-html-in-annotations/
 # https://github.com/dasch-swiss/daschiiify/blob/main/test/daschiiify-alpha.py
 
-# strategie on prend le manifest initiale et on le reconstruir depuis zero
 
 class IIIF(object):
     canvases = {}

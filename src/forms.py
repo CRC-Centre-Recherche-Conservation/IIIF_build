@@ -1,36 +1,50 @@
-from collections import namedtuple
+import os
+
 import requests
 import json
+from collections import namedtuple
 from PIL import Image
 from io import BytesIO
 
 from src.opt.tools import Color
+from path import CONFIG_PATH
 
-class FormSVG:
-    redimension = False
+
+class FormSVG(object):
     # Ratio is None or tuple (width, height)
     ratio = None
     dim_img_origin = None
 
-    def __init__(self, _id: str, type: str, image_url: str, debug: bool = False, verbose: bool = False):
+    def __init__(self, _id: str, type: str, image_url: str, debug: bool = False, **kwargs):
+        self.redimension = False
         if image_url.startswith('https://') or image_url.startswith('http://'):
+            # col 'Name' in csv
             self.id = _id
+            # col Type
             self.type = type
+            # col References -> API image
             self.image_url = image_url
+
+            # Other
             self.debug = debug
-            self.verbose = verbose
+            self.verbose = kwargs['verbose']
             self.image_size = self.get_dim_img()
         else:
             raise ValueError("You need to indicate an URI of your licence. Need to start by http or https protocols")
 
     @property
     def redimension(self) -> bool:
-        return self.redimension
+        return self._redimension
 
     @redimension.setter
     def redimension(self, statut):
+        """
+        Property function to return a ratio when image API dimension not correspond to the image dimension in the manifest.
+        :param statut: bool
+        :return: None
+        """
         if statut is True:
-            self.redimension = True
+            self._redimension = True
             self.ratio = self.get_ratio(self.dim_img_origin[0], self.dim_img_origin[1])
 
     def get_dim_img(self) -> namedtuple:
@@ -43,57 +57,74 @@ class FormSVG:
         img = Image.open(BytesIO(response.content))
         return img.size[0], img.size[1]
 
-    @staticmethod
-    def get_dim_manifest(manifest_url: str, img_w: int or float, img_h: int or float) -> bool or tuple:
+    def get_dim_manifest(self, _json, img_w: int or float, img_h: int or float) -> None or tuple:
         """
         To get dimension of original image.
-        :param img_w:
-        :param manifest_url:
-        :return:
+        :param _json: the json request of your manifest iiif
+        :param img_h: height image's
+        :param img_w: width image's
+        :return: Bool, tuple(width, height) or None. The boolean is to change
         """
 
         img_manifest = None
         Size = namedtuple('Size', ['w', 'h'])
 
-        json = requests.get(manifest_url).json()
-
-        for page in json['sequences'][0]['canvases']:
-            if page['images'][0]['resource']['@id'] == manifest_url:
+        for page in _json['sequences'][0]['canvases']:
+            if page['images'][0]['resource']['@id'] == self.image_url:
                 img_manifest = Size(h=page['images'][0]['resource']['height'], w=page['images'][0]['resource']['width'])
 
-        assert isinstance(img_manifest, Size), "We can't get the dimension of the canvas of original image in the manifest."
+        assert isinstance(img_manifest,
+                          Size), "We can't get the dimension of the canvas of original image in the manifest."
 
         if img_w != img_manifest.w or img_h != img_manifest.h:
-            return True, (img_manifest.w, img_manifest.h)
+            self.redimension = True
+            return img_manifest.w, img_manifest.h
         else:
-            return False, None
+            return None
 
-    def get_ratio(self, width, height):
+    def get_ratio(self, width: float or int, height: float or int) -> float or int:
         """
         Get dimension ratio of original image in manifest
         :param width:
         :param height:
         :return:
         """
-        assert isinstance(width, (float, int)), "Your change status of redimension, but the script can't get the good values [width] of original images."
-        assert isinstance(height, (float, int)), "Your change status of redimension, but the script can't get the good values [height] of original images."
+        assert isinstance(width, (float,
+                                  int)), "Your change status of redimension, but the script can't get the good values [width] of original images."
+        assert isinstance(height, (float,
+                                   int)), "Your change status of redimension, but the script can't get the good values [height] of original images."
         ratio_w = width / self.image_size[0]
         ratio_h = height / self.image_size[1]
         return ratio_w, ratio_h
 
-    def get_colors(self):
-        list_colors = {}
+    def get_colors(self, list_colors: dict):
+        """
+        Function to get colors in 'manuscript.json' in config file
+        :list_colors:
+        :return:
+        """
 
-        with open("config/Manuscript.json") as f:
-            js = json.load(f)
-            for ent in js['taxonomy']['descriptors']:
-                list_colors[ent['targetName']] = ent['targetColor']
+        for file in os.listdir(CONFIG_PATH):
+            if file.lower() == 'manuscript.json':
+                if self.verbose:
+                    print("Parsing config file colors 'manuscript.json'.")
+                with open("config/Manuscript.json") as f:
+                    js = json.load(f)
+                for ent in js['taxonomy']['descriptors']:
+                    list_colors[ent['targetName']] = ent['targetColor']
 
-        if self.type not in list(list_colors):
-            return Color(list(list_colors.values())).get_new_color()
-        else:
-            return list_colors[self.type]
+                # if add new type of analysis not in the scheme, but it's better to respect the scheme -> update in config
+                if self.type not in list(list_colors):
+                    print(f"We don't find the type '{self.type}' in the config file 'manuscript.json'")
+                    return Color(list(list_colors.values())).get_new_color()
+                else:
+                    return list_colors[self.type]
 
+            # If the script don't find 'manuscript.json file in config folder
+            else:
+                print("We cannot find config file 'manuscript.json' in the config folder")
+                print("Generation of color index")
+                return Color(list(list_colors.values())).get_new_color()
 
 
 class Rectangle(FormSVG):

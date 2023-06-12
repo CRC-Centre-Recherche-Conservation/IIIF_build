@@ -5,7 +5,6 @@ from src.iiif import Annotation, ManifestIIIF
 from src.opt.data_variables import LANGUAGES
 from src.opt.variables import URI_CRC
 
-
 # https://gitlab.huma-num.fr/jpressac/niiif-niiif
 
 # plan
