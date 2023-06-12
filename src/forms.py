@@ -84,19 +84,17 @@ class FormSVG(object):
         ratio_h = height / self.image_size[1]
         return ratio_w, ratio_h
 
-    def get_dim_manifest(self, _json):
+    def check_dim_manifest(self, canvas):
         """
         To get dimension of original image.
-        :param _json: the json request of your manifest iiif
-        :return: Nothing
+        :param canvas: canvas json part in manifest
+        :return: None
         """
 
         img_manifest = None
         Size = namedtuple('Size', ['w', 'h'])
 
-        for page in _json['sequences'][0]['canvases']:
-            if page['images'][0]['resource']['@id'] == self.image_url:
-                img_manifest = Size(h=page['images'][0]['resource']['height'], w=page['images'][0]['resource']['width'])
+        img_manifest = Size(h=canvas['images'][0]['resource']['height'], w=canvas['images'][0]['resource']['width'])
 
         assert isinstance(img_manifest,
                           Size), "We can't get the dimension of the canvas of original image in the manifest."
