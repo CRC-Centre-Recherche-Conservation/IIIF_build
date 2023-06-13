@@ -78,7 +78,7 @@ def build_manifest(*args, **kwargs):
                                      width=canvas['images'][0]['resource']['width'])
 
         # Annotation for add ressource image in canvas
-        anno_img = Annotation(id=URI_CRC + f"/annotation/p{str(n_canvas)}-image",
+        anno_img = Annotation(id=URI_CRC + f"/annotation/p{n_canvas:05}-image",
                               motivation="painting",
                               body=ressource_img,
                               target=canvas_img.id)
