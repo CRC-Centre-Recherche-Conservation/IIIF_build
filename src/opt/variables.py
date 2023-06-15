@@ -1,3 +1,8 @@
+#### DATA ####
+
+MICROSCOPY = ['mVis', 'mUV', 'mIR']
+MICROSCOPY_TARGET = 'image'
+
 #### LINKS ####
 
 URI_CRC = "https://data.crc.fr/iiif/"

@@ -1,13 +1,7 @@
-import os
-
 import requests
-import json
 from collections import namedtuple
 from PIL import Image
 from io import BytesIO
-
-from src.opt.tools import Color
-from path import CONFIG_PATH
 
 
 class FormSVG(object):
@@ -91,9 +85,7 @@ class FormSVG(object):
         :return: None
         """
 
-        img_manifest = None
         Size = namedtuple('Size', ['w', 'h'])
-
         img_manifest = Size(h=canvas['images'][0]['resource']['height'], w=canvas['images'][0]['resource']['width'])
 
         assert isinstance(img_manifest,
@@ -104,35 +96,6 @@ class FormSVG(object):
             self.dim_img_origin = (img_manifest.w, img_manifest.h)
             # Indication of change status -> run property function
             self.redimension = True
-
-    def get_colors(self, list_colors: dict):
-        """
-        Function to get colors in 'manuscript.json' in config file
-        :list_colors:
-        :return:
-        """
-
-        for file in os.listdir(CONFIG_PATH):
-            if file.lower() == 'manuscript.json':
-                if self.verbose:
-                    print("Parsing config file colors 'manuscript.json'.")
-                with open("config/Manuscript.json") as f:
-                    js = json.load(f)
-                for ent in js['taxonomy']['descriptors']:
-                    list_colors[ent['targetName']] = ent['targetColor']
-
-                # if add new type of analysis not in the scheme, but it's better to respect the scheme -> update in config
-                if self.type not in list(list_colors):
-                    print(f"We don't find the type '{self.type}' in the config file 'manuscript.json'")
-                    return Color(list(list_colors.values())).get_new_color()
-                else:
-                    return list_colors[self.type]
-
-            # If the script don't find 'manuscript.json file in config folder
-            else:
-                print("We cannot find config file 'manuscript.json' in the config folder")
-                print("Generation of color index")
-                return Color(list(list_colors.values())).get_new_color()
 
 
 class Rectangle(FormSVG):
