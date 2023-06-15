@@ -1,6 +1,7 @@
 import pandas as pd
 import requests
 import yaml
+from collections import namedtuple
 from yaml.loader import SafeLoader
 from iiif_prezi3 import Manifest, KeyValueString, config, ExternalItem, ResourceItem, Annotation, AnnotationPage
 
@@ -19,19 +20,34 @@ class IIIF(object):
 
     def __init__(self, uri, **kwargs):
         self.uri = uri
+        # Get json
         self.json = self._get_manifest()
+        # Get api level
+        self.api = self.get_api()
+        # options
         self.verbose = kwargs.get('verbose', False)
         self.lang = kwargs.get('language', 'fr')
         self.server = kwargs.get('server', URI_CRC)
         config.configs['helpers.auto_fields.AutoLang'].auto_lang = self.lang
 
     def _get_manifest(self):
+        """
+        Request http of API Manifest
+        :return:json request
+        """
         return requests.get(self.uri, allow_redirects=True).json()
 
-    def get_canvas(self, url_image: list):
-        for canvas in self.json['sequences'][0]['canvases']:
-            if canvas['images'][0]['resource']['@id'] == url_image:
-                self.canvases[canvas['images'][0]['resource']['@id']] = canvas
+    def get_api(self) -> float:
+        """
+        Function to determine level api in the original manifest
+        :return:
+        """
+        if self.json['@context'] == 'http://iiif.io/api/presentation/2/context.json':
+            return 2.1
+        elif self.json['@context'] == 'http://iiif.io/api/presentation/3/context.json':
+            return 3.0
+        else:
+            raise ValueError('Impossible to get the level API Presentation of your manifest. Please, check the manifest and its validity.')
 
 
 class ManifestIIIF(IIIF):
@@ -58,6 +74,11 @@ class ManifestIIIF(IIIF):
         if self.verbose:
             print("Getting metadata!")
         return self.json['metadata']
+
+    def get_canvas(self, url_image: list):
+        for canvas in self.json['sequences'][0]['canvases']:
+            if canvas['images'][0]['resource']['@id'] == url_image:
+                self.canvases[canvas['images'][0]['resource']['@id']] = canvas
 
     def get_preconfig(self, filename):
 
@@ -122,24 +143,25 @@ class ManifestIIIF(IIIF):
                 if n == 1:
                     self.metadata.append(
                         KeyValueString(label='Responsable Scientifique', value=author['name'].upper() + " " +
-                                                                               author['forename'] if author[
-                                                                                                         'forename'].upper() != 'NONE' else 'n.c.' + ", " +
-                                                                                                                                            author[
-                                                                                                                                                'role'] if
-                        author['role'].upper() != 'NONE' else 'n.c.'))
+                                                                               author['forename'] if author['forename'].upper() != 'NONE' else 'n.c.' + ", " +
+                                                                               author['role'] if author['role'].upper() != 'NONE' else 'n.c.'))
                 else:
                     self.metadata.append(
                         KeyValueString(label=f'Responsable Scientifique {str(n)}', value=author['name'].upper() + " " +
-                                                                                         author['forename'] if author[
-                                                                                                                   'forename'].upper() != 'NONE' else 'n.c.' + ", " +
-                                                                                                                                                      author[
-                                                                                                                                                          'role'] if
-                        author['role'].upper() != 'NONE' else 'n.c.'))
+                                                                                         author['forename'] if author['forename'].upper() != 'NONE' else 'n.c.' +
+                                                                                         ", " + author['role'] if
+                                                                                         author['role'].upper() != 'NONE' else 'n.c.'))
 
     def build_manifest(self):
+        """
+        Function to build manifest IIIF Presentation among API 3.0
+        :return:
+        """
 
+        # Check if we registered any metadata complementary
         if len(self.metadata) < 1:
             self.metadata = None
+        # Build Manifest
         self.manifest = Manifest(
             id=self.server + 'manifests/' + self.uri.split('/')[-1],
             label=self.label,
@@ -154,19 +176,37 @@ class ManifestIIIF(IIIF):
         )
 
     def build_thumbnail(self):
+        """
+        Get first canvas in the processing manifest to convert it in thumbnail for the manifest.
+        :return: None
+        """
+        # Get first canvas
         canvas_1 = list(self.canvases.keys())[0]
         canvas_1 = self.canvases[canvas_1]
 
+        # build thumbnai
         thumbnail = ResourceItem(id=canvas_1['images'][0]['resource']['@id'],
                                  type="Image",
                                  format=canvas_1['images'][0]['resource']['format'],
                                  width=200,
                                  height=300)
 
-        thumbnail.make_service(id=canvas_1['images'][0]['resource']['service']['@id'],
-                               type="ImageService3",
-                               profile="level2")
-
+        # API service among level API presentation of the manifest
+        if self.api < 3.0:
+            uri_info = canvas_1['images'][0]['on']
+            # get info services
+            service = ServicesIIIF(uri_info)
+            service_info = service.get_info_image()
+            # build service
+            thumbnail.make_service(id=uri_info,
+                                  type=service_info.type,
+                                  profile=service_info.profile)
+        # For Presentation API 3.0
+        else:
+            thumbnail.make_service(id=canvas_1['images'][0]['resource']['service']['@id'],
+                                  type=canvas_1['images'][0]['resource']['service']['type'],
+                                  profile=canvas_1['images'][0]['resource']['service']['profile'])
+        # add thumbnail in manifest
         self.manifest.thumbnail = [thumbnail]
 
     def add_canvas(self, canvas):
@@ -176,18 +216,50 @@ class ManifestIIIF(IIIF):
 class CanvasIIIF:
     pass
 
+class ServicesIIIF(IIIF):
+    def __init__(self, uri: str, **kwargs):
+        """
+        Works for only service image resource (!= API search, auth, etc.)
+        :param uri: str, URI of the service linked to your ressource image.
+        :param kwargs: verbose, server (see class IIIF)
+        """
+        if uri.endswith('info.json'):
+            try:
+                super().__init__(uri=uri, **kwargs)
+            #debug get_api()
+            except ValueError:
+                pass
+        else:
+            raise RuntimeError('Impossible to access to the API image service.')
 
-class SequenceIIIF(IIIF):
-    class XRF:
-        pass
+    def get_info_image(self) -> namedtuple:
+        """
+        Get info service for api image.
+        {
+            "id": self.uri,
+            "type": Info.type,
+            "profile": Info.profile
+        }
+        :return: namedtuple(type, profile)
+        """
+        Info = namedtuple('Info', ['type', 'profile'])
+        return Info(type=self.json['type'], profile=self.json['profile'])
 
-    class HyperSpectral:
+    def build_info_image(self):
         pass
 
 
 class AnnotationIIIF:
 
     def __init__(self, canvas: dict, data: dict, uri: str, n: tuple, **kwargs):
+        """
+
+        :param canvas:
+        :param data:
+        :param uri:
+        :param n:
+        :param kwargs:
+        """
         self.data = data
         self.uri = uri
         self.canvas = canvas
@@ -202,9 +274,6 @@ class AnnotationIIIF:
                      format="image/png",
                      height=1800,
                      width=1200)
-        return Annotation(
-            i
-        )
 
     def _make_forms(self) -> str:
         """
@@ -269,3 +338,18 @@ class AnnotationIIIF:
             }
         except Exception as err:
             print(err)
+
+
+class SequenceIIIF(IIIF):
+    class XRF:
+        pass
+
+    class Hyperspectral:
+        pass
+
+# pour xrf et hyperspectra
+#https://iiif.io/api/cookbook/recipe/0033-choice/
+
+
+ # https://iiif.io/api/cookbook/recipe/0036-composition-from-multiple-images/ annotation pour les photos de miscroscopiues
+ # "target": "https://iiif.io/api/cookbook/recipe/0036-composition-from-multiple-images/canvas/p1#xywh=3949,994,1091,1232" -> en gros selection via xywh

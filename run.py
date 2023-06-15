@@ -6,7 +6,7 @@ import click
 from iiif_prezi3 import Canvas, ResourceItem, AnnotationPage, Annotation
 
 from src.data import DataAnnotations
-from src.iiif import AnnotationIIIF, ManifestIIIF
+from src.iiif import AnnotationIIIF, ManifestIIIF, ServicesIIIF
 from src.opt.data_variables import LANGUAGES
 from src.opt.variables import URI_CRC
 
@@ -83,10 +83,23 @@ def build_manifest(*args, **kwargs):
                               body=ressource_img,
                               target=canvas_img.id)
 
-        #Add service to image
-        anno_img.make_service(id=canvas['images'][0]['resource']['service']['@id'],
-                              type="ImageService3",
-                              profile="level2")
+        # Add service to image
+        # API Presentation 2.0 - 2.1
+        if manifest.api < 3.0:
+            uri_info = canvas['images'][0]['on']
+            # get info services
+            service = ServicesIIIF(uri_info)
+            service_info = service.get_info_image()
+            # build service
+            anno_img.make_service(id=uri_info,
+                                  type=service_info.type,
+                                  profile=service_info.profile)
+        # For Presentation API 3.0
+        else:
+            anno_img.make_service(id=canvas['images'][0]['resource']['service']['@id'],
+                                  type=canvas['images'][0]['resource']['service']['type'],
+                                  profile=canvas['images'][0]['resource']['service']['profile'])
+
 
         #Page annotation for canvas
         anno_page = AnnotationPage(id=URI_CRC + f"/page/p{str(n_canvas)}/1")
@@ -109,7 +122,7 @@ def build_manifest(*args, **kwargs):
     manifest.build_thumbnail()
     print(manifest._print_json())
 
-    with open('output/manifest.json', 'w') as outfile:
+    with open('output/manifest_MS_59_CRC.json', 'w') as outfile:
         outfile.write(manifest.manifest.json(indent=2, ensure_ascii=False))
 
 
