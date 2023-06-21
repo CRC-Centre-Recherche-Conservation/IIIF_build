@@ -47,7 +47,8 @@ class IIIF(object):
         elif self.json['@context'] == 'http://iiif.io/api/presentation/3/context.json':
             return 3.0
         else:
-            raise ValueError('Impossible to get the level API Presentation of your manifest. Please, check the manifest and its validity.')
+            raise ValueError(
+                'Impossible to get the level API Presentation of your manifest. Please, check the manifest and its validity.')
 
 
 class ManifestIIIF(IIIF):
@@ -143,14 +144,20 @@ class ManifestIIIF(IIIF):
                 if n == 1:
                     self.metadata.append(
                         KeyValueString(label='Responsable Scientifique', value=author['name'].upper() + " " +
-                                                                               author['forename'] if author['forename'].upper() != 'NONE' else 'n.c.' + ", " +
-                                                                               author['role'] if author['role'].upper() != 'NONE' else 'n.c.'))
+                                                                               author['forename'] if author[
+                                                                                                         'forename'].upper() != 'NONE' else 'n.c.' + ", " +
+                                                                                                                                            author[
+                                                                                                                                                'role'] if
+                        author['role'].upper() != 'NONE' else 'n.c.'))
                 else:
                     self.metadata.append(
                         KeyValueString(label=f'Responsable Scientifique {str(n)}', value=author['name'].upper() + " " +
-                                                                                         author['forename'] if author['forename'].upper() != 'NONE' else 'n.c.' +
-                                                                                         ", " + author['role'] if
-                                                                                         author['role'].upper() != 'NONE' else 'n.c.'))
+                                                                                         author['forename'] if author[
+                                                                                                                   'forename'].upper() != 'NONE' else 'n.c.' +
+                                                                                                                                                      ", " +
+                                                                                                                                                      author[
+                                                                                                                                                          'role'] if
+                        author['role'].upper() != 'NONE' else 'n.c.'))
 
     def build_manifest(self):
         """
@@ -184,7 +191,7 @@ class ManifestIIIF(IIIF):
         canvas_1 = list(self.canvases.keys())[0]
         canvas_1 = self.canvases[canvas_1]
 
-        # build thumbnai
+        # build thumbnail
         thumbnail = ResourceItem(id=canvas_1['images'][0]['resource']['@id'],
                                  type="Image",
                                  format=canvas_1['images'][0]['resource']['format'],
@@ -199,22 +206,75 @@ class ManifestIIIF(IIIF):
             service_info = service.get_info_image()
             # build service
             thumbnail.make_service(id=uri_info,
-                                  type=service_info.type,
-                                  profile=service_info.profile)
+                                   type=service_info.type,
+                                   profile=service_info.profile)
         # For Presentation API 3.0
         else:
             thumbnail.make_service(id=canvas_1['images'][0]['resource']['service']['@id'],
-                                  type=canvas_1['images'][0]['resource']['service']['type'],
-                                  profile=canvas_1['images'][0]['resource']['service']['profile'])
+                                   type=canvas_1['images'][0]['resource']['service']['type'],
+                                   profile=canvas_1['images'][0]['resource']['service']['profile'])
         # add thumbnail in manifest
         self.manifest.thumbnail = [thumbnail]
 
-    def add_canvas(self, canvas):
-        pass
-
 
 class CanvasIIIF:
-    pass
+    format = {'jpg': 'image/jpeg',
+              'jpeg': 'image/jpeg',
+              'tif': ' image/tiff',
+              'tiff': 'image/tiff',
+              'png': ' image/png',
+              'gif': 'image/gif',
+              'jp2': 'image/gjp2',
+              'webp': 'image/webp',
+              'pdf': 'application/pdf'}
+
+    def __init__(self, url: str, **kwargs):
+        """
+        Class to check and modify information in CANVAS and its resources.
+        :param url: str, url of api image
+        :param kwargs: verbose (bool)
+        """
+        self.url = url
+        self.url_dir = url.split('/')
+        self.verbose = kwargs.get('verbose', False)
+
+    def check_size(self, level_api: float) -> str:
+        """
+        Parse url and identify if the size parameters correspond to the level API Image
+        :param level_api: float, level of API Image
+        :return:
+        """
+        # API image 2.0 or 2.1.1
+        if level_api < 3.0:
+            if self.url_dir[-3] == 'full':
+                return self.url
+            else:
+                if self.verbose:
+                    print("Incompatibility API image 2.0")
+                    print("Image api URL modification : add 'full' parameters in directory url")
+                return '/'.join(self.url_dir)
+        # API image 3.0
+        else:
+            if self.url_dir[-3] == 'max':
+                return self.url
+            else:
+                if self.verbose:
+                    print("Incompatibility API image 3.0")
+                    print("Image api URL modification : add 'max' parameters in directory url")
+                self.url_dir[-3] = 'max'
+                return '/'.join(self.url_dir)
+
+    def build_format(self) -> str or None:
+        """
+        Parse url and determine MIME type image among extension url
+        :return: str, MIME type or None if the script don't find extension. In case of None response, get the original value in your manifest.
+        """
+        _format = self.url_dir[-1].split('.')
+        try:
+            return self.format[_format[-1]]
+        except KeyError:
+            return None
+
 
 class ServicesIIIF(IIIF):
     def __init__(self, uri: str, **kwargs):
@@ -223,14 +283,13 @@ class ServicesIIIF(IIIF):
         :param uri: str, URI of the service linked to your ressource image.
         :param kwargs: verbose, server (see class IIIF)
         """
-        if uri.endswith('info.json'):
-            try:
-                super().__init__(uri=uri, **kwargs)
-            #debug get_api()
-            except ValueError:
-                pass
-        else:
-            raise RuntimeError('Impossible to access to the API image service.')
+        if not uri.endswith('info.json'):
+            uri = uri + '/info.json'
+        try:
+            super().__init__(uri=uri, **kwargs)
+            self.get_api()
+        except RuntimeError:
+            print(('Impossible to access to the API image service.'))
 
     def get_info_image(self) -> namedtuple:
         """
@@ -245,13 +304,23 @@ class ServicesIIIF(IIIF):
         Info = namedtuple('Info', ['type', 'profile'])
         return Info(type=self.json['type'], profile=self.json['profile'])
 
-    def build_info_image(self):
-        pass
+    def get_api(self):
+        """
+        Get level API image with the service
+        """
+        api_service = self.json['@context']
+        if api_service == "http://iiif.io/api/image/3/context.json" or api_service == "https://iiif.io/api/image/3/context.json":
+            self.api = 3.0
+        elif api_service == "http://iiif.io/api/image/2/context.json" or api_service == "https://iiif.io/api/image/2/context.json":
+            self.api = 2.0
+        else:
+            raise ValueError('Impossible to get level API Image')
 
 
 class AnnotationIIIF:
+    xywh = None
 
-    def __init__(self, canvas: dict, data: dict, uri: str, n: tuple, **kwargs):
+    def __init__(self, canvas: dict, data: dict, uri: str, **kwargs):
         """
 
         :param canvas:
@@ -263,39 +332,42 @@ class AnnotationIIIF:
         self.data = data
         self.uri = uri
         self.canvas = canvas
-        self.n = n
         self.verbose = kwargs.get('verbose', False)
-    # ajouter l'annotation dans la page annotationPage.add_item(annotation)
-    # canvas.add_item(annotationPage)
 
-    def make_annotation(self):
-        ResourceItem(id="http://iiif.io/api/presentation/2.1/example/fixtures/resources/page1-full.png",
-                     type="sc:Image",
-                     format="image/png",
-                     height=1800,
-                     width=1200)
 
-    def _make_forms(self) -> str:
+
+    def make_forms(self) -> str:
         """
         Function to get <svg> balise content for annotation iiif
         :param json: manifest iiif serialized
         :return: str, <svg> html
         """
         if isinstance(self.data['Type'], str):
+            # RECTANGLE
             if self.data['Type'].upper() == 'RECTANGLE':
                 rectangle = Rectangle(_id=self.data['Name'], image_url=self.uri, _type=self.data['Type_analysis'],
                                       x=self.data['Coordinates']['x'], y=self.data['Coordinates']['y'],
                                       w=self.data['Coordinates']['w'], h=self.data['Coordinates']['h'],
                                       verbose=self.verbose)
+                # check dimension image and form
                 rectangle.check_dim_manifest(self.canvas)
                 dimension = rectangle.dim_img_origin if rectangle.dim_img_origin is not None else rectangle.image_size
+                # fit dimension
                 balise = rectangle.fit()
+                # get xywh dimension
+                self.xywh = str(rectangle.x) + ',' + str(rectangle.y) + ',' + str(rectangle.w) + ',' + str(rectangle.h)
+
+            # MARKER
             elif self.data['Type'].upper() == 'MARKER':
                 marker = Marker(_id=self.data['Name'], image_url=self.uri, _type=self.data['Type_analysis'],
                                 x=self.data['Coordinates']['x'], y=self.data['Coordinates']['y'], verbose=self.verbose)
+                #check dimension image and form
                 marker.check_dim_manifest(self.canvas)
                 dimension = marker.dim_img_origin if marker.dim_img_origin is not None else marker.image_size
+                # fit dimension
                 balise = marker.fit()
+                # get xywh dimension
+                self.xywh = str(marker.x) + ',' + str(marker.y) + ',' + str(marker.w) + ',' + str(marker.h)
             else:
                 raise ValueError("The data annotation type need to be 'rectangle' or 'marker'")
             return f"""
@@ -348,8 +420,8 @@ class SequenceIIIF(IIIF):
         pass
 
 # pour xrf et hyperspectra
-#https://iiif.io/api/cookbook/recipe/0033-choice/
+# https://iiif.io/api/cookbook/recipe/0033-choice/
 
 
- # https://iiif.io/api/cookbook/recipe/0036-composition-from-multiple-images/ annotation pour les photos de miscroscopiues
- # "target": "https://iiif.io/api/cookbook/recipe/0036-composition-from-multiple-images/canvas/p1#xywh=3949,994,1091,1232" -> en gros selection via xywh
+# https://iiif.io/api/cookbook/recipe/0036-composition-from-multiple-images/ annotation pour les photos de miscroscopiues
+# "target": "https://iiif.io/api/cookbook/recipe/0036-composition-from-multiple-images/canvas/p1#xywh=3949,994,1091,1232" -> en gros selection via xywh
