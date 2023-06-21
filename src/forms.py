@@ -9,7 +9,7 @@ class FormSVG(object):
     ratio = None
     dim_img_origin = None
 
-    def __init__(self, _id: str, type: str, image_url: str, **kwargs):
+    def __init__(self, _id: str, _type: str, image_url: str, **kwargs):
         """
         General initalisation of form class to svg.
         :param _id: Id of your annotation.
@@ -22,7 +22,7 @@ class FormSVG(object):
             # col 'Name' in csv
             self.id = _id
             # col Type
-            self.type = type
+            self.type = _type
             # col References -> API image
             self.image_url = image_url
             # tuple (width, height)
