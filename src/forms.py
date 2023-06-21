@@ -111,7 +111,7 @@ class Rectangle(FormSVG):
         :param h: coordinate w (height)
         :param kwargs: verbose (boolean, default is false)
         """
-        super().__init__(_id=_id, image_url=image_url, type=_type, **kwargs)
+        super().__init__(_id=_id, image_url=image_url, _type=_type, **kwargs)
         self.x = x
         self.y = y
         self.w = w
@@ -142,7 +142,7 @@ class Marker(FormSVG):
         :param y: coordinate y
         :param kwargs: verbose (boolean, default is false)
         """
-        super().__init__(_id=_id, image_url=image_url, type=_type, **kwargs)
+        super().__init__(_id=_id, image_url=image_url, _type=_type, **kwargs)
         self.x = x
         self.y = y
         self.w = 5
