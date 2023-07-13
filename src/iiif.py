@@ -353,7 +353,7 @@ class AnnotationIIIF:
                 rectangle.check_dim_manifest(self.canvas)
                 dimension = rectangle.dim_img_origin if rectangle.dim_img_origin is not None else rectangle.image_size
                 # fit dimension
-                balise = rectangle.fit()
+                balise = rectangle.get_svg()
                 # get xywh dimension
                 self.xywh = str(rectangle.x) + ',' + str(rectangle.y) + ',' + str(rectangle.w) + ',' + str(rectangle.h)
 
@@ -365,7 +365,7 @@ class AnnotationIIIF:
                 marker.check_dim_manifest(self.canvas)
                 dimension = marker.dim_img_origin if marker.dim_img_origin is not None else marker.image_size
                 # fit dimension
-                balise = marker.fit()
+                balise = marker.get_svg()
                 # get xywh dimension
                 self.xywh = str(marker.x) + ',' + str(marker.y) + ',' + str(marker.w) + ',' + str(marker.h)
             else:

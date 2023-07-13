@@ -47,11 +47,12 @@ class FormSVG(object):
         if statut is True:
             self._redimension = True
             if self.dim_img_origin is None:
-                raise ValueError("Attribute class 'dim_img_origin' don't to be none value ")
+                raise ValueError("Attribute class 'dim_img_origin' don't be none value ")
             else:
                 if self.verbose:
                     print(f'Redimension of image {str(self.id)}')
                 self.ratio = self._get_ratio(self.dim_img_origin[0], self.dim_img_origin[1])
+                self.fit()
 
     def _get_dim_img(self) -> namedtuple:
         """
@@ -97,6 +98,9 @@ class FormSVG(object):
             # Indication of change status -> run property function
             self.redimension = True
 
+    def fit(self):
+        pass
+
 
 class Rectangle(FormSVG):
     def __init__(self, _id, image_url, _type, x, y, w, h, **kwargs):
@@ -119,15 +123,18 @@ class Rectangle(FormSVG):
 
     def fit(self):
         """
+        To fit with API image service dimension
+        """
+        assert isinstance(self.ratio, tuple), "Ratio attribute is None. You need to get a tuple (width, height)"
+        self.x *= self.ratio[0]
+        self.w *= self.ratio[0]
+        self.y *= self.ratio[1]
+        self.h *= self.ratio[1]
+    def get_svg(self):
+        """
         to build svg object in html with the data of your annotation.
         :return: str, html <rect>
         """
-        if self.redimension is False:
-            assert isinstance(self.ratio, tuple), "Ratio attribute is None. You need to get a tuple (width, height)"
-            self.x *= self.ratio[0]
-            self.w *= self.ratio[0]
-            self.y *= self.ratio[1]
-            self.h *= self.ratio[1]
         return f"""<rect id="{str(self.id)}" x="{str(self.x)}" y="{str(self.y)}" width="{str(self.w)}" height="{str(self.h)}" stroke="{str("color")}" rx="20" ry="20" fill-opacity=0 stroke-width="2px"/>"""
 
 
@@ -150,13 +157,15 @@ class Marker(FormSVG):
 
     def fit(self):
         """
+        To fit with API image service dimension
+        """
+        assert isinstance(self.ratio, tuple), "Ratio attribute is None. You need to get a tuple (width, height)"
+        self.x *= self.ratio[0]
+        self.y *= self.ratio[1]
+
+    def get_svg(self):
+        """
         to build svg object in html with the data of your annotation.
         :return: str, html <path>
         """
-        if self.redimension is False:
-            assert isinstance(self.ratio, tuple), "Ratio attribute is None. You need to get a tuple (width, height)"
-            self.x *= self.ratio[0]
-            self.y *= self.ratio[1]
-            if self.verbose:
-                print()
         return f"""<path d="M{str(self.x)},{str(self.y)}c0,-3.0303 1.51515,-6.06061 4.54545,-9.09091c0,-2.51039 -2.03507,-4.54545 -4.54545,-4.54545c-2.51039,0 -4.54545,2.03507 -4.54545,4.54545c3.0303,3.0303 4.54545,6.06061 4.54545,9.09091z" id="{self.id}" fill-opacity="0" fill="#00f000" stroke="{str("color")}" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="10"/>"""
