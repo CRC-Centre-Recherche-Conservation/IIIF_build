@@ -133,9 +133,8 @@ def build_manifest(*args, **kwargs):
                                  "value": data_anno['Type_analysis']},
                                    target={"type": "SpecificResource",
                                            "source": canvas_img.id,
-                                           "selector": {"type": "SvgSelector", "value": forms}
+                                           "selector": [{"type": "SvgSelector", "value": forms}]
                                            })
-            print(type(forms))
 
             canvas_img.add_annotation(form_anno, anno_page_id=URI_CRC + f"/page/p{str(n_canvas)}/2")
             # Add tags
@@ -148,7 +147,7 @@ def build_manifest(*args, **kwargs):
                                  "format": "text/plain",
                                  "value": f"{tag}"},
                            target=canvas_img.id + f"#xywh={str(annotation.xywh)}")
-                    canvas_img.add_annotation(anno_tag)
+                    canvas_img.add_annotation(anno_tag, anno_page_id=URI_CRC + f"/page/p{str(n_canvas)}/3")
             #If None value for tag
             except TypeError as err:
                 pass

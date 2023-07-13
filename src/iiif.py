@@ -370,11 +370,7 @@ class AnnotationIIIF:
                 self.xywh = str(marker.x) + ',' + str(marker.y) + ',' + str(marker.w) + ',' + str(marker.h)
             else:
                 raise ValueError("The data annotation type need to be 'rectangle' or 'marker'")
-            return f"""
-            <svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="{str(dimension[0])}" height="{str(dimension[1])}" xmlns:xlink="http://www.w3.org/1999/xlink">
-            {balise}
-            </svg>
-            """
+            return f"""<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="{str(dimension[0])}" height="{str(dimension[1])}" xmlns:xlink="http://www.w3.org/1999/xlink">{balise}</svg>"""
         else:
             raise TypeError('The data annotation type need to be string.')
 
