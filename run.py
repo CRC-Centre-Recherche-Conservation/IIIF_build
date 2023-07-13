@@ -133,8 +133,9 @@ def build_manifest(*args, **kwargs):
                                  "value": data_anno['Type_analysis']},
                                    target={"type": "SpecificResource",
                                            "source": canvas_img.id,
-                                           "selector": [{"type": "SvgSelector", "value": forms}]
+                                           "selector": {"type": "SvgSelector", "value": forms} #SelectorItem2
                                            })
+            print(form_anno.target)
 
             canvas_img.add_annotation(form_anno, anno_page_id=URI_CRC + f"/page/p{str(n_canvas)}/2")
             # Add tags
