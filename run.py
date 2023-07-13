@@ -125,7 +125,7 @@ def build_manifest(*args, **kwargs):
 
             forms = annotation.make_forms()
 
-            form_anno = Annotation(id=URI_CRC + f"annotation/p{n_canvas:05}-image/anno_{n_anno:01}-svg",
+            """form_anno = Annotation(id=URI_CRC + f"annotation/p{n_canvas:05}-image/anno_{n_anno:01}-svg",
                            motivation="tagging", #maybe other
                            body={"type": "TextualBody",
                                  "language": "fr",
@@ -136,10 +136,11 @@ def build_manifest(*args, **kwargs):
                                            "selector": {"type": "SvgSelector", "value": forms}
                                            })
 
-            canvas_img.add_annotation(form_anno, anno_page_id=URI_CRC + f"/page/p{str(n_canvas)}/2")
+            canvas_img.add_annotation(form_anno, anno_page_id=URI_CRC + f"/page/p{str(n_canvas)}/2")"""
             # Add tags
             try:
-                for n_tag, tag in enumerate(annotation.data['Tags']):
+                for n_tag, tag in enumerate(annotation.data['Tags']):  #
+                    print(tag)
                     anno_tag = Annotation(id=URI_CRC + f"annotation/p{n_canvas:05}-image/anno_{n_anno:01}/tags/{n_tag:01}",
                            motivation="tagging",
                            body={"type": "TextualBody",
