@@ -91,25 +91,25 @@ def build_manifest(*args, **kwargs):
                                      format=_format if _format is not None else canvas['images'][0]['resource']['format'], # To get correct format, but if error you got original format
                                      height=canvas['images'][0]['resource']['height'],
                                      width=canvas['images'][0]['resource']['width'])
-        # Annotation for add ressource image in canvas
-        anno_img = Annotation(id=URI_CRC + f"/annotation/p{n_canvas:05}-image",
-                              motivation="painting",
-                              body=ressource_img,
-                              target=canvas_img.id)
-
         # Add service to image
         ## API Presentation 2.0 - 2.1
         if manifest.api < 3.0:
             service_info = service.get_info_image()
             # build service
-            anno_img.make_service(id=uri_info.replace('/info.json', ''),
+            ressource_img.make_service(id=uri_info.replace('/info.json', ''),
                                   type=service_info.type,
-                                  profile=service_info.profile) #maybe level1
+                                  profile=service_info.profile)  # maybe level1
         ## For Presentation API 3.0
         else:
-            anno_img.make_service(id=canvas['items'][0]['items'][0]['service'][0]['@id'],
+            ressource_img.make_service(id=canvas['items'][0]['items'][0]['service'][0]['@id'],
                                   type=canvas['items'][0]['items'][0]['service'][0]['type'],
-                                  profile=canvas['items'][0]['items'][0]['service'][0]['profile']) #maybe level1
+                                  profile=canvas['items'][0]['items'][0]['service'][0]['profile'])  # maybe level1
+
+        # Annotation for add ressource image in canvas
+        anno_img = Annotation(id=URI_CRC + f"/annotation/p{n_canvas:05}-image",
+                              motivation="painting",
+                              body=ressource_img,
+                              target=canvas_img.id)
 
         #clean variable
         del url_image, ressource_img, service, service_info, canvas_api, _format
@@ -125,7 +125,7 @@ def build_manifest(*args, **kwargs):
 
             forms = annotation.make_forms()
 
-            form_anno = Annotation(id=URI_CRC + f"/annotation/p{n_canvas:05}-image/anno_{n_anno:01}",
+            form_anno = Annotation(id=URI_CRC + f"annotation/p{n_canvas:05}-image/anno_{n_anno:01}-svg",
                            motivation="tagging", #maybe other
                            body={"type": "TextualBody",
                                  "language": "fr",
@@ -133,23 +133,22 @@ def build_manifest(*args, **kwargs):
                                  "value": data_anno['Type_analysis']},
                                    target={"type": "SpecificResource",
                                            "source": canvas_img.id,
-                                           "selector": {"type": "SvgSelector",
-                                                        "value": forms}
-                                           },)
+                                           "selector": {"type": "SvgSelector", "value": forms}
+                                           })
+            print(type(forms))
 
-            anno_page.add_item(form_anno)
-
+            canvas_img.add_annotation(form_anno, anno_page_id=URI_CRC + f"/page/p{str(n_canvas)}/2")
             # Add tags
             try:
                 for n_tag, tag in enumerate(annotation.data['Tags']):
-                    anno_tag = Annotation(id=URI_CRC + f"/annotation/p{n_canvas:05}-image/anno_{n_anno:01}/tags/{n_tag:01}",
+                    anno_tag = Annotation(id=URI_CRC + f"annotation/p{n_canvas:05}-image/anno_{n_anno:01}/tags/{n_tag:01}",
                            motivation="tagging",
                            body={"type": "TextualBody",
                                  "language": "fr",
                                  "format": "text/plain",
                                  "value": f"{tag}"},
-                           target=canvas_img.id + f"xywh={str(annotation.xywh)}")
-                    anno_page.add_item(anno_tag)
+                           target=canvas_img.id + f"#xywh={str(annotation.xywh)}")
+                    canvas_img.add_annotation(anno_tag)
             #If None value for tag
             except TypeError as err:
                 pass
