@@ -2,3 +2,5 @@
 __pychache__/
 .idea/
 data/
+**/*.pyc
+test.py
