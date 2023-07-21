@@ -1,6 +1,4 @@
 import sys
-import os
-import http.server
 import socketserver
 import click
 from iiif_prezi3 import Canvas, ResourceItem, AnnotationPage, Annotation
@@ -9,6 +7,7 @@ from src.data import DataAnnotations
 from src.iiif import AnnotationIIIF, ManifestIIIF, ServicesIIIF, CanvasIIIF
 from src.opt.data_variables import LANGUAGES
 from src.opt.variables import URI_CRC
+from src.srv.localhost import MyHttpRequestHandler
 
 
 # https://gitlab.huma-num.fr/jpressac/niiif-niiif
@@ -173,27 +172,6 @@ def build_manifest(*args, **kwargs):
 
 @run_manifest.command()
 def server_manifest():
-    class MyHttpRequestHandler(http.server.SimpleHTTPRequestHandler):
-        def _set_headers(self):
-            self.send_response(200)
-            self.send_header('Content-type', 'application/json')
-            self.end_headers()
-
-        def do_HEAD(self):
-            self._set_headers()
-
-        def do_GET(self):
-            # self._set_headers()
-
-            if self.path == '/':
-                self.path = 'output/'
-
-            for file in os.listdir('output/'):
-                if self.path == f'/{file}':
-                    self.path = f'output/{file}'
-
-            return http.server.SimpleHTTPRequestHandler.do_GET(self)
-
     # Create an object of the above class
     handler_object = MyHttpRequestHandler
 
