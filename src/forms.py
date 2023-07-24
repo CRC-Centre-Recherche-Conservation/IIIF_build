@@ -152,8 +152,8 @@ class Marker(FormSVG):
         super().__init__(_id=_id, image_url=image_url, _type=_type, **kwargs)
         self.x = x
         self.y = y
-        self.w = 5
-        self.h = 5
+        self.w = 10
+        self.h = 10
 
     def fit(self):
         """
@@ -168,4 +168,4 @@ class Marker(FormSVG):
         to build svg object in html with the data of your annotation.
         :return: str, html <path>
         """
-        return f"""<path d="M{str(self.x)},{str(self.y)}c0,-3.0303 1.51515,-6.06061 4.54545,-9.09091c0,-2.51039 -2.03507,-4.54545 -4.54545,-4.54545c-2.51039,0 -4.54545,2.03507 -4.54545,4.54545c3.0303,3.0303 4.54545,6.06061 4.54545,9.09091z" id="{self.id}" fill-opacity="0" fill="#00f000" stroke="{str("color")}" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="10"/>"""
+        return f"""<path d="M{str(self.x)},{str(self.y)} c 0 -60.606 30.303 -121.2122 90.909 -181.8182 c 0 -50.2078 -40.7014 -90.909 -90.909 -90.909 c -50.2078 0 -90.909 40.7014 -90.909 90.909 c 60.606 60.606 90.909 121.2122 90.909 181.8182 z" fill-opacity="0" fill="#00f000" stroke="{str("color")}" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="10"/>"""
