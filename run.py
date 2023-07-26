@@ -123,23 +123,23 @@ def build_manifest(*args, **kwargs):
             annotation = AnnotationIIIF(canvas=canvas, data=data_anno, uri=uri_canvas, **kwargs)
 
             forms = annotation.make_forms()
-
-            """form_anno = Annotation(id=URI_CRC + f"annotation/p{n_canvas:05}-image/anno_{n_anno:01}-svg",
-                           motivation="tagging", #maybe other
+            if n_anno > 10:
+                form_anno = Annotation(id=URI_CRC + f"annotation/p{n_canvas:05}-image/anno_{n_anno:01}-svg",
+                           motivation="commenting", #maybe other
                            body={"type": "TextualBody",
                                  "language": "fr",
-                                 "format": "text/plain",
-                                 "value": data_anno['Type_analysis']},
-                                   target={"type": "SpecificResource",
-                                           "source": canvas_img.id,
-                                           "selector": {"type": "SvgSelector", "value": forms}
-                                           })
+                                 "format": "text/html",
+                                 "value": f"""<p><b>Type d'analyse:</b> {data_anno['Type_analysis']}</p>"""},
+                           target={"type": "SpecificResource",
+                                    "source": canvas_img.id,
+                                    "selector": {"type": "SvgSelector", "value": forms}
+                                    })
 
-            canvas_img.add_annotation(form_anno, anno_page_id=URI_CRC + f"/page/p{str(n_canvas)}/2")"""
+                canvas_img.add_annotation(form_anno, anno_page_id=URI_CRC + f"/page/p{str(n_canvas)}/2")
+
             # Add tags
             try:
-                for n_tag, tag in enumerate(annotation.data['Tags']):  #
-                    print(tag)
+                for n_tag, tag in enumerate(annotation.data['Tags']):
                     anno_tag = Annotation(id=URI_CRC + f"annotation/p{n_canvas:05}-image/anno_{n_anno:01}/tags/{n_tag:01}",
                            motivation="tagging",
                            body={"type": "TextualBody",

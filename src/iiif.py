@@ -3,7 +3,7 @@ import requests
 import yaml
 from collections import namedtuple
 from yaml.loader import SafeLoader
-from iiif_prezi3 import Manifest, KeyValueString, config, ExternalItem, ResourceItem, Annotation, AnnotationPage
+from iiif_prezi3 import Manifest, KeyValueString, config, ExternalItem, ResourceItem
 
 from src.opt.variables import URI_CRC
 from .forms import Rectangle, Marker
