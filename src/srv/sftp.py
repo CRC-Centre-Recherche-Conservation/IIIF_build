@@ -120,7 +120,7 @@ class Sftp:
         return idx_analysis
 
     @staticmethod
-    def upload_images(project: str, id_: str, imgs: list, path_remote='/home/rayondemiel/iiif/images/', security=True):
+    def upload_images(project: str, imgs: list, path_remote='/home/rayondemiel/iiif/images/', security=True):
 
         # export IIIFSRV_URL = 'sftp://user:password@host'
         sftp_url = os.environ.get("IIIFSRV_URL")  # URI format: sftp://user:password@host
