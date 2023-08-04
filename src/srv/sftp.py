@@ -2,16 +2,19 @@
 #### Crazy Ant Labs ####
 #### https://github.com/crazyantlabs/sftptogo-examples/blob/main/snippets/python/py-sftp/sftp.py.mustache ####
 
-import pysftp
-from urllib.parse import urlparse
 import os
+import re
+import platform
+import pysftp
+from collections import defaultdict
+from urllib.parse import urlparse
 
 # Configure path
 current_path = os.path.dirname(os.path.abspath(__file__))
 
 
 class Sftp:
-    def __init__(self, hostname, username, password, port=22):
+    def __init__(self, hostname, username, password, port=22, **kwargs):
         """Constructor Method"""
         # Set connection object to None (initial value)
         self.connection = None
@@ -19,6 +22,7 @@ class Sftp:
         self.username = username
         self.password = password
         self.port = port
+        self.verbose = kwargs['verbose']
 
     def connect(self):
         """Connects to the sftp server and returns the sftp connection object"""
@@ -57,9 +61,9 @@ class Sftp:
         """
 
         try:
-            print(
-                f"uploading to {self.hostname} as {self.username} [(remote path: {remote_path});(source local path: {source_local_path})]"
-            )
+            if self.verbose:
+                print(
+                    f"uploading to {self.hostname} as {self.username} [(remote path: {remote_path});(source local path: {source_local_path})]")
 
             # Download file from SFTP
             self.connection.put(source_local_path, remote_path)
@@ -75,9 +79,9 @@ class Sftp:
         """
 
         try:
-            print(
-                f"downloading from {self.hostname} as {self.username} [(remote path : {remote_path});(local path: {target_local_path})]"
-            )
+            if self.verbose:
+                print(
+                    f"downloading from {self.hostname} as {self.username} [(remote path : {remote_path});(local path: {target_local_path})]")
 
             # Create the target directory if it does not exist
             path, _ = os.path.split(target_local_path)
@@ -95,13 +99,28 @@ class Sftp:
             raise Exception(err)
 
     @staticmethod
-    def upload_images(project: str, analysis: str, path_remote='/home/rayondemiel/iiif/images/'):
+    def prepare_images() -> defaultdict:
+        # recuperer l'id dans le dictionnaire
+        # recuperer la liste d'images et mettre dans une liste
+        # envoyer les images dans le dossier (projet/id_analysis+nom_fichier)
+        # return dataframe avec id, url de la premiere image, list des images a mettre en calque
 
-        # hps = hyperspectral
-        # sxrf = scans XRF
-        # faire un script pour lire à partir du YAML les images devant être publiées sur serveur IIIF
-        if analysis.lower() not in ['hps', 'sxrf']:
-            raise ValueError('Need to corresponding to hyperspectral (HPS) or XRF scans (sXRF)')
+        # Variables
+        data_files = os.path.join("data", "data_files")
+        anl_patter = re.compile(r"((?:HS_SWIR_|HS_VNIR_|sXRF_)\d+)")
+        idx_analysis = defaultdict(list)
+        # Search all id analysis
+        for path, subdirs, files in os.walk(data_files, topdown=True):
+            for name in files:
+                path_image = os.path.join(path, name)
+                search_path = re.search(anl_patter, path_image)
+                if search_path:
+                    id_ = search_path.group(0)
+                    idx_analysis[id_].append(path_image)
+        return idx_analysis
+
+    @staticmethod
+    def upload_images(project: str, id_: str, imgs: list, path_remote='/home/rayondemiel/iiif/images/', security=True):
 
         # export IIIFSRV_URL = 'sftp://user:password@host'
         sftp_url = os.environ.get("IIIFSRV_URL")  # URI format: sftp://user:password@host
@@ -123,24 +142,22 @@ class Sftp:
         sftp.connect()
 
         # build dir project
-        path_project = os.path.join(path_remote, project.lower(), analysis.lower())
-        if sftp.connection.exists:
-            print('The project exists.')
+        path_project = os.path.join(path_remote, project.lower())
+        if sftp.connection.exists is True and security is True:
+            print(f"The project '{project}' already exists. Existing files could be damaged.")
             input_path = input('Do you want to continue ? [y/n]').lower()
             if input_path == 'n':
+                sftp.disconnect()
                 exit(0)
         else:
             sftp.connection.makedirs(path_project)
 
-        path_dir_data = 'xrf' if analysis.lower() == 'sxrf' else 'hps'
-
-        for file in os.listdir('data'):
-            if os.path.isfile(os.path.join("data", path_dir_data, project.lower(), file)) and file.endswith('.tif'):
-                print(file)
-
+        for id_img in imgs:
+            if platform.system() == 'Windows':
+                name_file = id_img.split('\\')[-1]
+            else:
+                name_file = id_img.split('/')[-1]
+            print(path_project + '/' + img + '&' + name_file)
+            sftp.upload(id_img, path_project + '/' + img + '&' + name_file)
         # Disconnect from SFTP
         sftp.disconnect()
-
-
-if __name__ == "__main__":
-    Sftp.upload_images(project='ms_blabla', analysis='sXRF')

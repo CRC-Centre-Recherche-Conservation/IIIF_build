@@ -149,7 +149,7 @@ def build_manifest(*args, **kwargs):
                            target=canvas_img.id + f"#xywh={str(annotation.xywh)}")
                     canvas_img.add_annotation(anno_tag, anno_page_id=URI_CRC + f"/page/p{str(n_canvas)}/3")
             #If None value for tag
-            except TypeError as err:
+            except TypeError:
                 pass
 
 
