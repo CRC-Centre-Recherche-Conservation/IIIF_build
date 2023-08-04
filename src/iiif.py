@@ -35,7 +35,13 @@ class IIIF(object):
         Request http of API Manifest
         :return:json request
         """
-        return requests.get(self.uri, allow_redirects=True).json()
+        iiif = requests.get(self.uri, allow_redirects=True)
+        if 200 < iiif.status_code < 400:
+            return iiif.json()
+        else:
+            print('Impossible to connect to server. Check URL validity.')
+            print(f'Code error : {iiif.status_code}).')
+            exit(0)
 
     def get_api(self) -> float:
         """
