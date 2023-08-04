@@ -14,7 +14,7 @@ current_path = os.path.dirname(os.path.abspath(__file__))
 
 
 class Sftp:
-    def __init__(self, hostname, username, password, port=22, **kwargs):
+    def __init__(self, hostname, username, password, port=22, verbose=False):
         """Constructor Method"""
         # Set connection object to None (initial value)
         self.connection = None
@@ -22,7 +22,7 @@ class Sftp:
         self.username = username
         self.password = password
         self.port = port
-        self.verbose = kwargs['verbose']
+        self.verbose = verbose
 
     def connect(self):
         """Connects to the sftp server and returns the sftp connection object"""
@@ -67,7 +67,8 @@ class Sftp:
 
             # Download file from SFTP
             self.connection.put(source_local_path, remote_path)
-            print("upload completed")
+            if self.verbose:
+                print("upload completed")
 
         except Exception as err:
             raise Exception(err)
@@ -93,7 +94,8 @@ class Sftp:
 
             # Download from remote sftp server to local
             self.connection.get(remote_path, target_local_path)
-            print("download completed")
+            if self.verbose:
+                print("download completed")
 
         except Exception as err:
             raise Exception(err)
@@ -119,8 +121,8 @@ class Sftp:
                     idx_analysis[id_].append(path_image)
         return idx_analysis
 
-    @staticmethod
-    def upload_images(project: str, imgs: list, path_remote='/home/rayondemiel/iiif/images/', security=True):
+    @classmethod
+    def upload_images(cls, project: str, id_: str, imgs: list, path_remote='/home/rayondemiel/iiif/images/', security=True, **kwargs):
 
         # export IIIFSRV_URL = 'sftp://user:password@host'
         sftp_url = os.environ.get("IIIFSRV_URL")  # URI format: sftp://user:password@host
@@ -132,17 +134,18 @@ class Sftp:
         # parse sftp url to get all attributes
         parsed_url = urlparse(sftp_url)
 
-        sftp = Sftp(
+        sftp = cls(
             hostname=parsed_url.hostname,
             username=parsed_url.username,
             password=parsed_url.password,
+            verbose=kwargs['verbose']
         )
 
         # Connect to SFTP
         sftp.connect()
 
         # build dir project
-        path_project = os.path.join(path_remote, project.lower())
+        path_project = os.path.join(path_remote, project)
         if sftp.connection.exists is True and security is True:
             print(f"The project '{project}' already exists. Existing files could be damaged.")
             input_path = input('Do you want to continue ? [y/n]').lower()
@@ -152,11 +155,40 @@ class Sftp:
         else:
             sftp.connection.makedirs(path_project)
 
-        for id_img in imgs:
+        for img in imgs:
             if platform.system() == 'Windows':
-                name_file = id_img.split('\\')[-1]
+                name_file = img.split('\\')[-1]
             else:
-                name_file = id_img.split('/')[-1]
-            sftp.upload(id_img, path_project + '/' + id_img + '&' + name_file)
+                name_file = img.split('/')[-1]
+            sftp.upload(img, path_project + '/' + id_ + '&' + name_file)
+
+        print('Successful uploads for all images')
         # Disconnect from SFTP
         sftp.disconnect()
+
+    @classmethod
+    def get_list_dir(cls, project: str, path_remote='/home/rayondemiel/iiif/images/'):
+
+        # export IIIFSRV_URL = 'sftp://user:password@host'
+        sftp_url = os.environ.get("IIIFSRV_URL")  # URI format: sftp://user:password@host
+
+        if not sftp_url:
+            raise ValueError(
+                "First, please set environment variable IIIFSRV_URL and try again. URI SCHEME : sftp://user:password@host")
+
+        # parse sftp url to get all attributes
+        parsed_url = urlparse(sftp_url)
+
+        sftp = cls(
+            hostname=parsed_url.hostname,
+            username=parsed_url.username,
+            password=parsed_url.password
+        )
+
+        sftp.connect()
+        path_remote = path_remote + project
+        file_list = list(sftp.listdir(path_remote))
+        sftp.disconnect()
+        return file_list
+
+

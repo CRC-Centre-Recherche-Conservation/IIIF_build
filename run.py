@@ -1,6 +1,7 @@
 import sys
 import socketserver
 import click
+import re
 from iiif_prezi3 import Canvas, ResourceItem, AnnotationPage, Annotation
 
 from src.data import DataAnnotations
@@ -8,6 +9,7 @@ from src.iiif import AnnotationIIIF, ManifestIIIF, ServicesIIIF, CanvasIIIF
 from src.opt.data_variables import LANGUAGES
 from src.opt.variables import URI_CRC
 from src.srv.localhost import MyHttpRequestHandler
+from src.srv.sftp import Sftp
 
 
 # https://gitlab.huma-num.fr/jpressac/niiif-niiif
@@ -20,7 +22,7 @@ from src.srv.localhost import MyHttpRequestHandler
 # donc besoin d'upload sur nakala -> pour image iiif
 
 # exemple url dans fichier -> separateur par %2F dans notre identifiant
-#https://192.168.122.28:8183/iiif/3/20200121_MS59_f1V_map2_100ms_260mic%2F20200121_MS59_f1V_map2_100ms_260mic_As.tif/full/max/0/default.jpg
+# https://192.168.122.28:8183/iiif/3/20200121_MS59_f1V_map2_100ms_260mic%2F20200121_MS59_f1V_map2_100ms_260mic_As.tif/full/max/0/default.jpg
 
 # pour l'intant, ne lit que les API Presentation 2.0
 
@@ -47,10 +49,12 @@ def build_manifest(*args, **kwargs):
     :param kwargs:
     :return: Manifest API Presentation 3.0
     """
-    data = DataAnnotations("data/ms59_annotation_iiif.csv", delimiter=";")
+    data = DataAnnotations("data/data_annotations/ms59_annotation_iiif.csv", delimiter=";")
 
     # build manifest
-    manifest = ManifestIIIF('https://emmsm.unicaen.fr/manifests/Avranches_BM_59.json')
+    # manifest = ManifestIIIF('https://emmsm.unicaen.fr/manifests/Avranches_BM_59.json')
+    manifest = ManifestIIIF(
+        'https://crc-centre-recherche-conservation.github.io/iiif/iiif/manifest/Avranches_BM_59.json')
     manifest.get_preconfig('/home/maxime/Bureau/projet_crc/IIIF_builder/config/config_example.yaml')
     manifest.build_manifest()
 
@@ -64,7 +68,7 @@ def build_manifest(*args, **kwargs):
         manifest.annotation[uri] = list_anno
 
     for n_canvas, uri_canvas in enumerate(manifest.canvases):
-        #get original data
+        # get original data
         canvas = manifest.canvases[uri_canvas]
 
         # Canvas entities
@@ -87,7 +91,8 @@ def build_manifest(*args, **kwargs):
         # Ressource image entities for canvas
         ressource_img = ResourceItem(id=url_image,
                                      type=canvas['images'][0]['resource']['@type'],
-                                     format=_format if _format is not None else canvas['images'][0]['resource']['format'], # To get correct format, but if error you got original format
+                                     format=_format if _format is not None else canvas['images'][0]['resource'][
+                                         'format'],  # To get correct format, but if error you got original format
                                      height=canvas['images'][0]['resource']['height'],
                                      width=canvas['images'][0]['resource']['width'])
         # Add service to image
@@ -96,13 +101,13 @@ def build_manifest(*args, **kwargs):
             service_info = service.get_info_image()
             # build service
             ressource_img.make_service(id=uri_info.replace('/info.json', ''),
-                                  type=service_info.type,
-                                  profile=service_info.profile)  # maybe level1
+                                       type=service_info.type,
+                                       profile=service_info.profile)  # maybe level1
         ## For Presentation API 3.0
         else:
             ressource_img.make_service(id=canvas['items'][0]['items'][0]['service'][0]['@id'],
-                                  type=canvas['items'][0]['items'][0]['service'][0]['type'],
-                                  profile=canvas['items'][0]['items'][0]['service'][0]['profile'])  # maybe level1
+                                       type=canvas['items'][0]['items'][0]['service'][0]['type'],
+                                       profile=canvas['items'][0]['items'][0]['service'][0]['profile'])  # maybe level1
 
         # Annotation for add ressource image in canvas
         anno_img = Annotation(id=URI_CRC + f"/annotation/p{n_canvas:05}-image",
@@ -110,14 +115,12 @@ def build_manifest(*args, **kwargs):
                               body=ressource_img,
                               target=canvas_img.id)
 
-        #clean variable
+        # clean variable
         del url_image, ressource_img, service, service_info, canvas_api, _format
 
-
-        #Page annotation for canvas
+        # Page annotation for canvas
         anno_page = AnnotationPage(id=URI_CRC + f"/page/p{str(n_canvas)}/1")
         anno_page.add_item(anno_img)
-
 
         for n_anno, data_anno in enumerate(manifest.annotation[uri_canvas]):
             annotation = AnnotationIIIF(canvas=canvas, data=data_anno, uri=uri_canvas, **kwargs)
@@ -125,46 +128,68 @@ def build_manifest(*args, **kwargs):
             forms = annotation.make_forms()
             if n_anno > 10:
                 form_anno = Annotation(id=URI_CRC + f"annotation/p{n_canvas:05}-image/anno_{n_anno:01}-svg",
-                           motivation="commenting", #maybe other
-                           body={"type": "TextualBody",
-                                 "language": "fr",
-                                 "format": "text/html",
-                                 "value": f"""<p><b>Type d'analyse:</b> {data_anno['Type_analysis']}</p>"""},
-                           target={"type": "SpecificResource",
-                                    "source": canvas_img.id,
-                                    "selector": {"type": "SvgSelector", "value": forms}
-                                    })
+                                       motivation="commenting",  # maybe other
+                                       body={"type": "TextualBody",
+                                             "language": "fr",
+                                             "format": "text/html",
+                                             "value": f"""<p><b>Type d'analyse:</b> {data_anno['Type_analysis']}</p>"""},
+                                       target={"type": "SpecificResource",
+                                               "source": canvas_img.id,
+                                               "selector": {"type": "SvgSelector", "value": forms}
+                                               })
 
                 canvas_img.add_annotation(form_anno, anno_page_id=URI_CRC + f"/page/p{str(n_canvas)}/2")
 
             # Add tags
             try:
                 for n_tag, tag in enumerate(annotation.data['Tags']):
-                    anno_tag = Annotation(id=URI_CRC + f"annotation/p{n_canvas:05}-image/anno_{n_anno:01}/tags/{n_tag:01}",
-                           motivation="tagging",
-                           body={"type": "TextualBody",
-                                 "language": "fr",
-                                 "format": "text/plain",
-                                 "value": f"{tag}"},
-                           target=canvas_img.id + f"#xywh={str(annotation.xywh)}")
+                    anno_tag = Annotation(
+                        id=URI_CRC + f"annotation/p{n_canvas:05}-image/anno_{n_anno:01}/tags/{n_tag:01}",
+                        motivation="tagging",
+                        body={"type": "TextualBody",
+                              "language": "fr",
+                              "format": "text/plain",
+                              "value": f"{tag}"},
+                        target=canvas_img.id + f"#xywh={str(annotation.xywh)}")
                     canvas_img.add_annotation(anno_tag, anno_page_id=URI_CRC + f"/page/p{str(n_canvas)}/3")
-            #If None value for tag
+            # If None value for tag
             except TypeError:
                 pass
 
-
-        #Add annotation by canvas
+        # Add annotation by canvas
         canvas_img.add_item(anno_page)
-        #Add cavas in manifest
+        # Add cavas in manifest
         manifest.manifest.add_item(canvas_img)
+
+    # build thumbnail manifest
+    manifest.build_thumbnail()
+    # print(manifest._print_json())
+
+
+
+    # Build Collections
+
+    # Upload files
+    list_img = Sftp.prepare_images()
+    for img in list_img:
+        Sftp.upload_images('Ms59', id_=img, imgs=list_img[img], **kwargs)
+
+    list_ressources = Sftp.get_list_dir('Ms59')
+    # dataframe -> data.get_type_analysis(_type: 'sXRF') -> avoir les rows et obtenir les id ainsi que l'url image IIIF de base
+    # avoir la liste des images -> regex pour trouver à partir de l'id
+    #                            -> ^($id)   sXRF_8&Ms59-f53v_deconv_Cu.tif      -> chopper tous les liens avec id (avant le &)
+    # loop sur les id par types d'analyses
+    #faire un canvas avec images de bases
+    # Annotation(id=URI_CRC + f"/annotation/p{n_canvas:05}-image",
+    #                               motivation="painting",
+    #                               body=[ResourceItem image de base, RessourceItem1, etc.],     ->  C'est laque faut ajuter les images
+    #                               target=canvas_img.id)
+    # lien url : http://192.168.122.28:8182/iiif/3/{projet}%2F{image_ressource}/full/max/0/default.jpg
 
     if kwargs['usage_memory']:
         print("The size of the manifest.canvases is:", sys.getsizeof(manifest.canvases), "bytes.")
         print("The size of the annotation is:", sys.getsizeof(manifest.annotation), "bytes.")
         print("The size of the manifest is:", sys.getsizeof(manifest.manifest), "bytes.")
-
-    manifest.build_thumbnail()
-    #print(manifest._print_json())
 
     with open('output/manifest_MS_59_CRC.json', 'w') as outfile:
         outfile.write(manifest.manifest.json(indent=2, ensure_ascii=False))

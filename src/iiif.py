@@ -36,7 +36,7 @@ class IIIF(object):
         :return:json request
         """
         iiif = requests.get(self.uri, allow_redirects=True)
-        if 200 < iiif.status_code < 400:
+        if 200 <= iiif.status_code < 400:
             return iiif.json()
         else:
             print('Impossible to connect to server. Check URL validity.')

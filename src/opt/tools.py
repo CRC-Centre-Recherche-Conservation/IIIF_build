@@ -1,7 +1,6 @@
 import matplotlib.colors as mcolors
 import random
 
-
 class Color:
     def __init__(self, list_color):
         self.list_color = list_color

@@ -62,3 +62,5 @@ class DataAnnotations:
     def get_uri(self):
         return [annotation[0] for annotation in self.annotations]
 
+    def get_type_analysis(self, _type: str) -> pd.DataFrame:
+        return self.df.loc[(self.df['Character'] == _type)]
