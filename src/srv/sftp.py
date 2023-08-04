@@ -157,7 +157,7 @@ class Sftp:
                 name_file = id_img.split('\\')[-1]
             else:
                 name_file = id_img.split('/')[-1]
-            print(path_project + '/' + img + '&' + name_file)
-            sftp.upload(id_img, path_project + '/' + img + '&' + name_file)
+            print(path_project + '/' + id_img + '&' + name_file)
+            sftp.upload(id_img, path_project + '/' + id_img + '&' + name_file)
         # Disconnect from SFTP
         sftp.disconnect()
