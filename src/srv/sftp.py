@@ -139,8 +139,6 @@ class Sftp:
         elif sftp.exists(path_project) is False and security is False:
             sftp.sftp.mkdir(path_project)
 
-        print('test')
-
         for img in imgs:
             if platform.system() == 'Windows':
                 name_file = img.split('\\')[-1]
@@ -177,18 +175,15 @@ class Sftp:
 
         def get_size(path_img: str):
             "To get size of images"
-            Size = namedtuple('Size', ['weight', 'height'])
-            with sftp.sftp.open(path_img) as f:
-
-                #print('hello')
-                print(f)
-                #img = Image.open(BytesIO(f.content))
-            #return Size(weight=img.size[0], height=img.size[1])
+            Size = namedtuple('Size', ['width', 'height'])
+            with sftp.sftp.open(path_img, 'rb') as f:
+                img = Image.open(f)
+            return Size(width=img.size[0], height=img.size[1])
 
         # build dict with size for any images
         dict_files = {}
         for img in file_list:
-            size = get_size(path_remote + img)
+            size = get_size(path_remote + '/' + img)
             dict_files[img] = size
 
         del file_list

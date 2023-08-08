@@ -243,7 +243,6 @@ def build_manifest(*args, **kwargs):
 
             ##### Build others Images (Scans) #####
             idx_img = list(filter(lambda x: x.startswith(row['Name']), list(list_img.keys())))
-            print(idx_img)
             # Check if id is empty
             if len(idx_img) == 0:
                 error.n += 1
@@ -255,12 +254,12 @@ def build_manifest(*args, **kwargs):
                 _format = canvas_scans.build_format()
 
                 ressource_scan = ResourceItem(id=url_image,
-                                              type=canvas['images'][0]['resource']['@type'],
+                                              type='Image',
                                               format=_format if _format is not None else 'image/jpeg',
                                               # To get correct format, but if error you got original format
                                               label='test: ' + analysis + ', ' + row['Name'],
-                                              height=canvas['images'][0]['resource']['height'],
-                                              width=canvas['images'][0]['resource']['width'])
+                                              height=list_img[img].height,
+                                              width=list_img[img].width)
 
     if error.n > 0:
         print(f"Error identifying images from the following identifiers: {', '.join(error.list_id)}.")
