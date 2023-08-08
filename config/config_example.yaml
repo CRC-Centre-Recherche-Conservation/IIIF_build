@@ -15,7 +15,6 @@ metadata:
     technique:
       - label: XRF
       - label: Hyperspecral
-    
 
 authors:
   - name: Michelin

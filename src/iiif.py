@@ -277,7 +277,7 @@ class CanvasIIIF:
         """
         _format = self.url_dir[-1].split('.')
         try:
-            return self.format[_format[-1]]
+            return self.format[_format[-1].lower()]
         except KeyError:
             return None
 
@@ -414,11 +414,17 @@ class AnnotationIIIF:
             print(err)
 
 
-class SequenceIIIF(IIIF):
+class SequenceIIIF:
+    def __init__(self, _id, project:str, list_img: str):
+        pass
+
     class XRF:
         pass
 
     class Hyperspectral:
+        pass
+
+    class Multispectral:
         pass
 
 # pour xrf et hyperspectra

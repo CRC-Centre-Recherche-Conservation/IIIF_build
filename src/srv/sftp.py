@@ -6,7 +6,9 @@ import os
 import re
 import platform
 import pysftp
-from collections import defaultdict
+from PIL import Image
+from io import BytesIO
+from collections import defaultdict, namedtuple
 from urllib.parse import urlparse
 
 # Configure path
@@ -188,7 +190,25 @@ class Sftp:
         sftp.connect()
         path_remote = path_remote + project
         file_list = list(sftp.listdir(path_remote))
+
+        def get_size(path_img: str):
+            "To get size of images"
+            Size = namedtuple('Size', ['weight', 'height'])
+            with sftp.connection.get(path_img, preserve_mtime=True) as f:
+
+                #print('hello')
+                print(f)
+                #img = Image.open(BytesIO(f.content))
+            #return Size(weight=img.size[0], height=img.size[1])
+
+        # build dict with size for any images
+        dict_files = {}
+        for img in file_list:
+            size = get_size(path_remote + img)
+            dict_files[img] = size
+
+        del file_list
         sftp.disconnect()
-        return file_list
+        return dict_files
 
 
