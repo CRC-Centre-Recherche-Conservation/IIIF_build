@@ -23,7 +23,7 @@ class Sftp:
             self.client = paramiko.client.SSHClient()
         else:
             self.client = client
-        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        self.client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         self.hostname = hostname
         self.username = username
         self.password = password
@@ -41,6 +41,7 @@ class Sftp:
                 password=self.password,
                 port=self.port,
             )
+            self.sftp = self.client.open_sftp()
         except Exception as err:
             raise Exception(err)
         finally:
@@ -63,15 +64,13 @@ class Sftp:
         """
         Uploads the source files from local to the sftp server.
         """
-        sftp = self.client.open_sftp()
-
         try:
             if self.verbose:
                 print(
                     f"uploading to {self.hostname} as {self.username} [(remote path: {remote_path});(source local path: {source_local_path})]")
 
             # Download file from SFTP
-            sftp.put(source_local_path, remote_path)
+            self.sftp.put(source_local_path, remote_path)
             if self.verbose:
                 print("upload completed")
 
@@ -79,9 +78,8 @@ class Sftp:
             print(err)
 
     def exists(self, path):
-        sftp = self.client.open_sftp()
         try:
-            sftp.stat(path)
+            self.sftp.stat(path)
             return True
         except IOError:
             return False
@@ -108,7 +106,7 @@ class Sftp:
         return idx_analysis
 
     @classmethod
-    def upload_images(cls, project: str, id_: str, imgs: list, path_remote='/home/rayondemiel/iiif/images/', security=True, **kwargs):
+    def upload_images(cls, project: str, id_: str, imgs: list, path_remote='/home/rayondemiel/iiif/images/', security=False, **kwargs):
 
         # export IIIFSRV_URL = 'sftp://user:password@host'
         sftp_url = os.environ.get("IIIFSRV_URL")  # URI format: sftp://user:password@host
@@ -132,14 +130,16 @@ class Sftp:
 
         # build dir project
         path_project = os.path.join(path_remote, project)
-        if sftp.connection.exists(path_project) is True and security is True:
+        if sftp.exists(path_project) is True and security is True:
             print(f"The project '{project}' already exists. Existing files could be damaged.")
             input_path = input('Do you want to continue ? [y/n]').lower()
             if input_path == 'n':
                 sftp.disconnect()
                 exit(0)
-        else:
-            sftp.connection.makedirs(path_project)
+        elif sftp.exists(path_project) is False and security is False:
+            sftp.sftp.mkdir(path_project)
+
+        print('test')
 
         for img in imgs:
             if platform.system() == 'Windows':
@@ -148,7 +148,7 @@ class Sftp:
                 name_file = img.split('/')[-1]
             sftp.upload(img, path_project + '/' + id_ + '&' + name_file)
 
-        print('Successful uploads for all images')
+        print(f'Successful uploads for all images of {id_}')
         # Disconnect from SFTP
         sftp.disconnect()
 
@@ -178,7 +178,7 @@ class Sftp:
         def get_size(path_img: str):
             "To get size of images"
             Size = namedtuple('Size', ['weight', 'height'])
-            with sftp.connection.get(path_img, preserve_mtime=True) as f:
+            with sftp.sftp.open(path_img) as f:
 
                 #print('hello')
                 print(f)
