@@ -5,7 +5,7 @@
 import os
 import re
 import platform
-import pysftp
+import paramiko
 from PIL import Image
 from io import BytesIO
 from collections import defaultdict, namedtuple
@@ -16,10 +16,14 @@ current_path = os.path.dirname(os.path.abspath(__file__))
 
 
 class Sftp:
-    def __init__(self, hostname, username, password, port=22, verbose=False):
+    def __init__(self, hostname, username, password, port=22, client=None, verbose=False):
         """Constructor Method"""
         # Set connection object to None (initial value)
-        self.connection = None
+        if client is None:
+            self.client = paramiko.client.SSHClient()
+        else:
+            self.client = client
+        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         self.hostname = hostname
         self.username = username
         self.password = password
@@ -31,8 +35,8 @@ class Sftp:
 
         try:
             # Get the sftp connection object
-            self.connection = pysftp.Connection(
-                host=self.hostname,
+            self.client.connect(
+                hostname=self.hostname,
                 username=self.username,
                 password=self.password,
                 port=self.port,
@@ -40,27 +44,26 @@ class Sftp:
         except Exception as err:
             raise Exception(err)
         finally:
-            print(f"Connected to {self.hostname} as {self.username}.")
+            if self.verbose:
+                print(f"Connected to {self.hostname} as {self.username}.")
 
     def disconnect(self):
         """Closes the sftp connection"""
-        self.connection.close()
-        print(f"Disconnected from host {self.hostname}")
+        self.client.close()
+        if self.verbose:
+            print(f"Disconnected from host {self.hostname}")
 
     def listdir(self, remote_path):
         """lists all the files and directories in the specified path and returns them"""
-        for obj in self.connection.listdir(remote_path):
+        sftp = self.client.open_sftp()
+        for obj in sftp.listdir(remote_path):
             yield obj
-
-    def listdir_attr(self, remote_path):
-        """lists all the files and directories (with their attributes) in the specified path and returns them"""
-        for attr in self.connection.listdir_attr(remote_path):
-            yield attr
 
     def upload(self, source_local_path, remote_path):
         """
         Uploads the source files from local to the sftp server.
         """
+        sftp = self.client.open_sftp()
 
         try:
             if self.verbose:
@@ -68,39 +71,20 @@ class Sftp:
                     f"uploading to {self.hostname} as {self.username} [(remote path: {remote_path});(source local path: {source_local_path})]")
 
             # Download file from SFTP
-            self.connection.put(source_local_path, remote_path)
+            sftp.put(source_local_path, remote_path)
             if self.verbose:
                 print("upload completed")
 
         except Exception as err:
-            raise Exception(err)
+            print(err)
 
-    def download(self, remote_path, target_local_path):
-        """
-        Downloads the file from remote sftp server to local.
-        Also, by default extracts the file to the specified target_local_path
-        """
-
+    def exists(self, path):
+        sftp = self.client.open_sftp()
         try:
-            if self.verbose:
-                print(
-                    f"downloading from {self.hostname} as {self.username} [(remote path : {remote_path});(local path: {target_local_path})]")
-
-            # Create the target directory if it does not exist
-            path, _ = os.path.split(target_local_path)
-            if not os.path.isdir(path):
-                try:
-                    os.makedirs(path)
-                except Exception as err:
-                    raise Exception(err)
-
-            # Download from remote sftp server to local
-            self.connection.get(remote_path, target_local_path)
-            if self.verbose:
-                print("download completed")
-
-        except Exception as err:
-            raise Exception(err)
+            sftp.stat(path)
+            return True
+        except IOError:
+            return False
 
     @staticmethod
     def prepare_images() -> defaultdict:
@@ -148,7 +132,7 @@ class Sftp:
 
         # build dir project
         path_project = os.path.join(path_remote, project)
-        if sftp.connection.exists is True and security is True:
+        if sftp.connection.exists(path_project) is True and security is True:
             print(f"The project '{project}' already exists. Existing files could be damaged.")
             input_path = input('Do you want to continue ? [y/n]').lower()
             if input_path == 'n':
