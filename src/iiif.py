@@ -5,7 +5,7 @@ from collections import namedtuple
 from yaml.loader import SafeLoader
 from iiif_prezi3 import Manifest, KeyValueString, config, ExternalItem, ResourceItem
 
-from src.opt.variables import URI_CRC, DOMAIN_IIIF_HTTPS, ENDPOINT_API_IMG_3, ENDPOINT_API_IMG_2
+from src.opt.variables import DOMAIN_IIIF_HTTPS, ENDPOINT_API_IMG_3, ENDPOINT_API_IMG_2
 from .forms import Rectangle, Marker
 
 
@@ -18,16 +18,17 @@ class IIIF(object):
     manifest = Manifest
     annotation = {}
 
-    def __init__(self, uri, **kwargs):
+    def __init__(self, uri, request=True, **kwargs):
         self.uri = uri
         # Get json
-        self.json = self._get_manifest()
-        # Get api level
-        self.api = self.get_api()
+        if request:
+            self.json = self._get_manifest()
+            # Get api level
+            self.api = self.get_api()
         # options
-        self.verbose = kwargs.get('verbose', False)
+        self.verbose = kwargs.get('verbose')
         self.lang = kwargs.get('language', 'fr')
-        self.server = kwargs.get('server', URI_CRC)
+        self.server = kwargs.get('server')
         config.configs['helpers.auto_fields.AutoLang'].auto_lang = self.lang
 
     def _get_manifest(self):
@@ -66,10 +67,13 @@ class ManifestIIIF(IIIF):
     metadata = []
     seealso = []
 
-    def __init__(self, uri, **kwargs):
+    def __init__(self, uri, label=None, **kwargs):
         super().__init__(
             uri=uri, **kwargs)
-        self.label = self._build_label()
+        if label is None:
+            self.label = self._build_label()
+        else:
+            self.label = label
 
     def _print_json(self):
         return self.manifest.json(indent=2, ensure_ascii=False)
@@ -88,7 +92,6 @@ class ManifestIIIF(IIIF):
                 self.canvases[canvas['images'][0]['resource']['@id']] = canvas
 
     def get_preconfig(self, filename):
-
         if self.verbose:
             print("""//////////////////////YAML GENERATION IN PROGRESS//////////////////////""")
         with open(filename) as f:
@@ -165,18 +168,23 @@ class ManifestIIIF(IIIF):
                                                                                                                                                           'role'] if
                         author['role'].upper() != 'NONE' else 'n.c.'))
 
-    def build_manifest(self):
+    def build_manifest(self, url=None):
         """
         Function to build manifest IIIF Presentation among API 3.0
+        :url: str, Custom URL for MANIFEST URI
         :return:
         """
 
         # Check if we registered any metadata complementary
         if len(self.metadata) < 1:
             self.metadata = None
+        # Option personalisation url
+        if url is None:
+            url = self.server + 'manifests/' + self.uri.split('/')[-1]
+
         # Build Manifest
         self.manifest = Manifest(
-            id=self.server + 'manifests/' + self.uri.split('/')[-1],
+            id=url,
             label=self.label,
             rights=self.rights[1],
             behavior=["paged"],
@@ -415,7 +423,7 @@ class AnnotationIIIF:
 
 
 class SequenceIIIF:
-    format = {'jpg': 'image/jpeg',
+    formats = {'jpg': 'image/jpeg',
               'jpeg': 'image/jpeg',
               'tif': ' image/tiff',
               'tiff': 'image/tiff',
@@ -428,6 +436,7 @@ class SequenceIIIF:
         self.filename = filename
         self.project = project
         self.verbose = kwargs['verbose']
+        self.format, self.extension = self.build_format()
 
     def build_uri(self):
         """
@@ -447,28 +456,41 @@ class SequenceIIIF:
 
     def build_url_V3(self):
         """
-        Build URI info.json
-        {https}://{domain}/{endpoint}/{levelAPI}/{project}2%F{id_image}/info.json
+        Build standard URL API Image 3.0
+        {https}://{domain}/{endpoint}/{levelAPI}/{project}2%F{id_image}/{region}/{size}/{rotation}/{quality}.{format}
         :return: str, uri
         """
-        return DOMAIN_IIIF_HTTPS + ENDPOINT_API_IMG_3 + self.project + '%2F' + self.filename + '/full/max/0/default.jpg'
+        api_url = '/full/max/0/default.jpg'
+        if self.format not in ['.jpeg', '.jpg'] and self.format is not None:
+            api_url = api_url.replace('.jpg', '.' + self.extension)
+        return DOMAIN_IIIF_HTTPS + ENDPOINT_API_IMG_3 + self.project + '%2F' + self.filename + api_url
 
     def build_url_V2(self):
-        return DOMAIN_IIIF_HTTPS + ENDPOINT_API_IMG_2 + self.project + '%2F' + self.filename + '/full/full/0/default.jpg'
+        """
+        Build standard URL API Image 2.0
+        {https}://{domain}/{endpoint}/{levelAPI}/{project}2%F{id_image}/{region}/{size}/{rotation}/{quality}.{format}
+        :return: str, uri
+        """
+        api_url = '/full/max/0/default.jpg'
+        if self.extension not in ['jpeg', 'jpg'] and self.extension is not None:
+            api_url = api_url.replace('.jpg', '.' + self.extension)
+        return DOMAIN_IIIF_HTTPS + ENDPOINT_API_IMG_2 + self.project + '%2F' + self.filename + api_url
 
     def build_format(self) -> str or None:
         """
         Parse url and determine MIME type image among extension url
-        :return: str, MIME type or None if the script don't find extension. In case of None response, get the original value in your manifest.
+        :return: str, MIME type and extension or None if the script don't find extension. In case of None response, get the original value in your manifest.
         """
         _format = self.filename.split('.')
         try:
-            return self.format[_format[-1].lower()]
+            return self.formats[_format[-1].lower()], _format[-1].lower()
         except KeyError:
-            return None
+            return None, None
 
 class XRF(SequenceIIIF):
-    pass
+
+    def __init__(self, project: str, filename: str, **kwargs):
+        super().__init__(project, filename, **kwargs)
 
 class Hyperspectral(SequenceIIIF):
     pass

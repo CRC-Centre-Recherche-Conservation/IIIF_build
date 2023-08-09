@@ -54,6 +54,8 @@ class FormSVG(object):
                 self.ratio = self._get_ratio(self.dim_img_origin[0], self.dim_img_origin[1])
                 self.fit()
 
+
+
     def _get_dim_img(self) -> namedtuple:
         """
         To get image API dimension

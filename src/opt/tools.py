@@ -1,5 +1,16 @@
 import matplotlib.colors as mcolors
 import random
+import os
+
+from path import CURRENT_PATH
+
+
+def get_default_project():
+    dirs = os.listdir(os.path.join(CURRENT_PATH, 'data', 'data_files'))
+    if len(dirs) > 1:
+        print("There is more than one project in the 'data_files' folder. Please, keep only one project.")
+        exit(0)
+    return dirs[0]
 
 class Color:
     def __init__(self, list_color):

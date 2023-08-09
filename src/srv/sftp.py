@@ -10,8 +10,7 @@ from PIL import Image
 from collections import defaultdict, namedtuple
 from urllib.parse import urlparse
 
-# Configure path
-current_path = os.path.dirname(os.path.abspath(__file__))
+
 
 
 class Sftp:
