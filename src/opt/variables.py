@@ -6,6 +6,10 @@ MICROSCOPY_TARGET = 'image'
 #### LINKS ####
 
 URI_CRC = "https://data.crc.fr/iiif/"
+DOMAIN_IIIF_HTTP = 'http://192.168.122.28:8182/'
+DOMAIN_IIIF_HTTPS = 'https://192.168.122.28:8183/'
+ENDPOINT_API_IMG_3 = 'iiif/3/'
+ENDPOINT_API_IMG_2 = 'iiif/2/'
 
 #### CSV ####
 USEFULL_CSV = ['Basis of Record',

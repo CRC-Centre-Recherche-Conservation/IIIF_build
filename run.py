@@ -253,13 +253,14 @@ def build_manifest(*args, **kwargs):
                 canvas_scans = CanvasIIIF(img, verbose=kwargs['verbose'])
                 _format = canvas_scans.build_format()
 
-                ressource_scan = ResourceItem(id=url_image,
+                print(img)
+                """ressource_scan = ResourceItem(id=url_image,
                                               type='Image',
                                               format=_format if _format is not None else 'image/jpeg',
                                               # To get correct format, but if error you got original format
                                               label='test: ' + analysis + ', ' + row['Name'],
                                               height=list_img[img].height,
-                                              width=list_img[img].width)
+                                              width=list_img[img].width)"""
 
     if error.n > 0:
         print(f"Error identifying images from the following identifiers: {', '.join(error.list_id)}.")

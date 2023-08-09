@@ -5,7 +5,7 @@ from collections import namedtuple
 from yaml.loader import SafeLoader
 from iiif_prezi3 import Manifest, KeyValueString, config, ExternalItem, ResourceItem
 
-from src.opt.variables import URI_CRC
+from src.opt.variables import URI_CRC, DOMAIN_IIIF_HTTPS, ENDPOINT_API_IMG_3, ENDPOINT_API_IMG_2
 from .forms import Rectangle, Marker
 
 
@@ -415,17 +415,66 @@ class AnnotationIIIF:
 
 
 class SequenceIIIF:
-    def __init__(self, _id, project:str, list_img: str):
-        pass
+    format = {'jpg': 'image/jpeg',
+              'jpeg': 'image/jpeg',
+              'tif': ' image/tiff',
+              'tiff': 'image/tiff',
+              'png': ' image/png',
+              'gif': 'image/gif',
+              'jp2': 'image/gjp2',
+              'webp': 'image/webp',
+              'pdf': 'application/pdf'}
+    def __init__(self, _id, project: str, filename: str):
+        self.id = _id
+        self.filename = filename
+        self.project = project
 
-    class XRF:
-        pass
+    def build_uri(self):
+        """
+        Build URI Images
+        {https}://{domain}/{endpoint}/{levelAPI}/{project}2%F{id_image}
+        :return: str, uri
+        """
+        return DOMAIN_IIIF_HTTPS + ENDPOINT_API_IMG_3 + self.project + '2%F' + self.filename
 
-    class Hyperspectral:
-        pass
+    def build_uri_info(self):
+        """
+        Build URI info.json
+        {https}://{domain}/{endpoint}/{levelAPI}/{project}2%F{id_image}/info.json
+        :return: str, uri
+        """
+        return DOMAIN_IIIF_HTTPS + ENDPOINT_API_IMG_3 + self.project + '2%F' + self.filename + '/info.json'
 
-    class Multispectral:
-        pass
+    def build_url_V3(self):
+        """
+        Build URI info.json
+        {https}://{domain}/{endpoint}/{levelAPI}/{project}2%F{id_image}/info.json
+        :return: str, uri
+        """
+        return DOMAIN_IIIF_HTTPS + ENDPOINT_API_IMG_3 + self.project + '2%F' + self.filename + '/full/max/0/default.jpg'
+
+    def build_url_V2(self):
+        return DOMAIN_IIIF_HTTPS + ENDPOINT_API_IMG_2 + self.project + '2%F' + self.filename + '/full/full/0/default.jpg'
+
+    def build_format(self) -> str or None:
+        """
+        Parse url and determine MIME type image among extension url
+        :return: str, MIME type or None if the script don't find extension. In case of None response, get the original value in your manifest.
+        """
+        _format = self.filename.split('.')
+        try:
+            return self.format[_format[-1].lower()]
+        except KeyError:
+            return None
+
+class XRF(SequenceIIIF):
+    pass
+
+class Hyperspectral(SequenceIIIF):
+    pass
+
+class Multispectral(SequenceIIIF):
+    pass
 
 # pour xrf et hyperspectra
 # https://iiif.io/api/cookbook/recipe/0033-choice/
