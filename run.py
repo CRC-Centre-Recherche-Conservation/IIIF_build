@@ -5,7 +5,7 @@ from collections import namedtuple
 from iiif_prezi3 import Canvas, ResourceItem, AnnotationPage, Annotation
 
 from src.data import DataAnnotations
-from src.iiif import AnnotationIIIF, ManifestIIIF, ServicesIIIF, CanvasIIIF
+from src.iiif import AnnotationIIIF, ManifestIIIF, ServicesIIIF, CanvasIIIF, SequenceIIIF
 from src.opt.data_variables import LANGUAGES
 from src.opt.variables import URI_CRC
 from src.srv.localhost import MyHttpRequestHandler
@@ -250,10 +250,9 @@ def build_manifest(*args, **kwargs):
 
             for img in idx_img:
 
-                canvas_scans = CanvasIIIF(img, verbose=kwargs['verbose'])
-                _format = canvas_scans.build_format()
+                sequence_img = SequenceIIIF('Ms59', img,  verbose=kwargs['verbose'])
 
-                print(img)
+                print(sequence_img.build_url_V3())
                 """ressource_scan = ResourceItem(id=url_image,
                                               type='Image',
                                               format=_format if _format is not None else 'image/jpeg',

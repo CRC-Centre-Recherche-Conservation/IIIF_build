@@ -144,7 +144,7 @@ class Sftp:
                 name_file = img.split('\\')[-1]
             else:
                 name_file = img.split('/')[-1]
-            sftp.upload(img, path_project + '/' + id_ + '&' + name_file)
+            sftp.upload(img, path_project + '/' + id_ + '&' + name_file.replace(' ', '_'))
 
         print(f'Successful uploads for all images of {id_}')
         # Disconnect from SFTP

@@ -424,10 +424,10 @@ class SequenceIIIF:
               'jp2': 'image/gjp2',
               'webp': 'image/webp',
               'pdf': 'application/pdf'}
-    def __init__(self, _id, project: str, filename: str):
-        self.id = _id
+    def __init__(self, project: str, filename: str, **kwargs):
         self.filename = filename
         self.project = project
+        self.verbose = kwargs['verbose']
 
     def build_uri(self):
         """
@@ -435,7 +435,7 @@ class SequenceIIIF:
         {https}://{domain}/{endpoint}/{levelAPI}/{project}2%F{id_image}
         :return: str, uri
         """
-        return DOMAIN_IIIF_HTTPS + ENDPOINT_API_IMG_3 + self.project + '2%F' + self.filename
+        return DOMAIN_IIIF_HTTPS + ENDPOINT_API_IMG_3 + self.project + '%2F' + self.filename
 
     def build_uri_info(self):
         """
@@ -443,7 +443,7 @@ class SequenceIIIF:
         {https}://{domain}/{endpoint}/{levelAPI}/{project}2%F{id_image}/info.json
         :return: str, uri
         """
-        return DOMAIN_IIIF_HTTPS + ENDPOINT_API_IMG_3 + self.project + '2%F' + self.filename + '/info.json'
+        return DOMAIN_IIIF_HTTPS + ENDPOINT_API_IMG_3 + self.project + '%2F' + self.filename + '/info.json'
 
     def build_url_V3(self):
         """
@@ -451,10 +451,10 @@ class SequenceIIIF:
         {https}://{domain}/{endpoint}/{levelAPI}/{project}2%F{id_image}/info.json
         :return: str, uri
         """
-        return DOMAIN_IIIF_HTTPS + ENDPOINT_API_IMG_3 + self.project + '2%F' + self.filename + '/full/max/0/default.jpg'
+        return DOMAIN_IIIF_HTTPS + ENDPOINT_API_IMG_3 + self.project + '%2F' + self.filename + '/full/max/0/default.jpg'
 
     def build_url_V2(self):
-        return DOMAIN_IIIF_HTTPS + ENDPOINT_API_IMG_2 + self.project + '2%F' + self.filename + '/full/full/0/default.jpg'
+        return DOMAIN_IIIF_HTTPS + ENDPOINT_API_IMG_2 + self.project + '%2F' + self.filename + '/full/full/0/default.jpg'
 
     def build_format(self) -> str or None:
         """
