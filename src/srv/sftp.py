@@ -7,7 +7,6 @@ import re
 import platform
 import paramiko
 from PIL import Image
-from io import BytesIO
 from collections import defaultdict, namedtuple
 from urllib.parse import urlparse
 
