@@ -105,7 +105,7 @@ class ManifestIIIF(IIIF):
                     print(self.label)
 
             if config_yaml['manifest'].upper() != "DEFAULT":
-                self.label_url = self.server + ENDPOINT_MANIFEST + config_yaml['manifest'] + '.json'
+                self.label_url = self.server + ENDPOINT_MANIFEST + config_yaml['manifest'].replace(' ', '_') + '.json'
                 if self.verbose:
                     print(self.label_url)
 

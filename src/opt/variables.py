@@ -2,6 +2,10 @@
 
 MICROSCOPY = ['mVis', 'mUV', 'mIR']
 MICROSCOPY_TARGET = 'image'
+SCANNERS = {'sXRF': 'Scanner de Spectrométrie par Fluorescence des rayons X',
+            'HS_SWIR': 'Hyperspectral Infrarouge Court',
+            'HS_VNIR': 'Hyperspectral Visible et Proche Infrarouge',
+            'MSP': 'Image Multispectrale'}
 
 #### LINKS ####
 # IIIF Manifest
