@@ -1,4 +1,5 @@
 label: TITLE or DEFAULT
+manifest: STR or DEFAULT
 description: STR or None
 
 Institution:

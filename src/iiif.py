@@ -5,7 +5,7 @@ from collections import namedtuple
 from yaml.loader import SafeLoader
 from iiif_prezi3 import Manifest, KeyValueString, config, ExternalItem, ResourceItem
 
-from src.opt.variables import DOMAIN_IIIF_HTTPS, ENDPOINT_API_IMG_3, ENDPOINT_API_IMG_2
+from src.opt.variables import DOMAIN_IIIF_HTTPS, ENDPOINT_API_IMG_3, ENDPOINT_API_IMG_2, ENDPOINT_MANIFEST
 from .forms import Rectangle, Marker
 
 
@@ -70,16 +70,17 @@ class ManifestIIIF(IIIF):
     def __init__(self, uri, label=None, **kwargs):
         super().__init__(
             uri=uri, **kwargs)
-        if label is None:
-            self.label = self._build_label()
-        else:
-            self.label = label
+        self.label = self._build_label()
+        self.label = label
 
     def _print_json(self):
         return self.manifest.json(indent=2, ensure_ascii=False)
 
     def _build_label(self):
         return self.json['label'] + ", analyses physico-chimique @CRC"
+
+    def _build_label_url(self):
+        return self.server + ENDPOINT_MANIFEST + self.uri.split('/')[-1].replace('.json', '') + '_CRC' + '.json'
 
     def get_metadata(self):
         if self.verbose:
@@ -103,11 +104,18 @@ class ManifestIIIF(IIIF):
                 if self.verbose:
                     print(self.label)
 
+            if config_yaml['manifest'].upper() != "DEFAULT":
+                self.label_url = self.server + ENDPOINT_MANIFEST + config_yaml['manifest'] + '.json'
+                if self.verbose:
+                    print(self.label_url)
+
+
             # Description
             if config_yaml['description'].upper() != 'NONE':
                 self.description = config_yaml['description']
                 if self.verbose:
                     print(self.description)
+
 
             # Licence
             if config_yaml['licence']['label'].upper() != 'DEFAULT':
@@ -180,7 +188,7 @@ class ManifestIIIF(IIIF):
             self.metadata = None
         # Option personalisation url
         if url is None:
-            url = self.server + 'manifests/' + self.uri.split('/')[-1]
+            url = self.label_url
 
         # Build Manifest
         self.manifest = Manifest(
