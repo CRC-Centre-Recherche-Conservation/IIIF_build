@@ -10,7 +10,8 @@ SCANNERS = {'sXRF': 'Scanner de Spectrométrie par Fluorescence des rayons X',
 #### LINKS ####
 # IIIF Manifest
 URI_CRC = "https://crc-centre-recherche-conservation.github.io/"
-ENDPOINT_MANIFEST = "/iiif/iiif/manifest/"
+ENDPOINT_MANIFEST = "iiif/iiif/manifest/"
+ENDPOINT_BASE = "iiif/"
 
 # IIIF SRV
 DOMAIN_IIIF_HTTP = 'http://192.168.122.28:8182/'

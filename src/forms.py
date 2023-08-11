@@ -9,29 +9,29 @@ class FormSVG(object):
     ratio = None
     dim_img_origin = None
 
-    def __init__(self, _id: str, _type: str, image_url: str, **kwargs):
+    def __init__(self, _id: str, image_url, **kwargs):
         """
         General initalisation of form class to svg.
         :param _id: Id of your annotation.
         :param type: Type of analysis in your annotation
-        :param image_url: URI of API image
+        :param image_url: str, URI of API image
         :param kwargs: verbose
         """
         self.redimension = False
-        if image_url.startswith('https://') or image_url.startswith('http://'):
-            # col 'Name' in csv
-            self.id = _id
-            # col Type
-            self.type = _type
-            # col References -> API image
-            self.image_url = image_url
-            # tuple (width, height)
-            self.image_size = self._get_dim_img()
+        # col 'Name' in csv
+        self.id = _id
+        # Check with Size with request
+        self.verbose = kwargs['verbose']
+        if image_url is not None:
+            assert isinstance(image_url, str), "Variable [image_url] must be of type string to be used."
+            if image_url.startswith('https://') or image_url.startswith('http://'):
+                # col References -> API image
+                self.image_url = image_url
+                # tuple (width, height)
+                self.image_size = self._get_dim_img()
 
-            # Other
-            self.verbose = kwargs.get('verbose', False)
-        else:
-            raise ValueError("You need to indicate an URI of your licence. Need to start by http or https protocols")
+            else:
+                raise ValueError("You need to indicate an URI of your licence. Need to start by http or https protocols")
 
     @property
     def redimension(self) -> bool:
@@ -53,8 +53,6 @@ class FormSVG(object):
                     print(f'Redimension of image {str(self.id)}')
                 self.ratio = self._get_ratio(self.dim_img_origin[0], self.dim_img_origin[1])
                 self.fit()
-
-
 
     def _get_dim_img(self) -> namedtuple:
         """
@@ -81,22 +79,20 @@ class FormSVG(object):
         ratio_h = height / self.image_size[1]
         return ratio_w, ratio_h
 
-    def check_dim_manifest(self, canvas):
+    def check_dim_manifest(self, canvas_w: int, canvas_h: int, image_size=None):
         """
         To get dimension of original image.
-        :param canvas: canvas json part in manifest
+        :param canvas_w: int, canvas width
+        :param canvas_h: int, canvas height
+        :param image_size: tuple,
         :return: None
         """
-
-        Size = namedtuple('Size', ['w', 'h'])
-        img_manifest = Size(h=canvas['images'][0]['resource']['height'], w=canvas['images'][0]['resource']['width'])
-
-        assert isinstance(img_manifest,
-                          Size), "We can't get the dimension of the canvas of original image in the manifest."
-
-        if self.image_size[0] != img_manifest.w or self.image_size[1] != img_manifest.h:
+        if image_size is not None:
+            assert isinstance(image_size, tuple), '[image_size] need to be a tuple (width, height)'
+            self.image_size = image_size
+        if self.image_size[0] != canvas_w or self.image_size[1] != canvas_h:
             # get tuple with original dimension
-            self.dim_img_origin = (img_manifest.w, img_manifest.h)
+            self.dim_img_origin = (canvas_w, canvas_h)
             # Indication of change status -> run property function
             self.redimension = True
 
@@ -105,7 +101,7 @@ class FormSVG(object):
 
 
 class Rectangle(FormSVG):
-    def __init__(self, _id, image_url, _type, x, y, w, h, **kwargs):
+    def __init__(self, _id, x, y, w, h, image_url=None, **kwargs):
         """
         class for rectangle form.
         :param _id: Id of your annotation.
@@ -117,7 +113,7 @@ class Rectangle(FormSVG):
         :param h: coordinate w (height)
         :param kwargs: verbose (boolean, default is false)
         """
-        super().__init__(_id=_id, image_url=image_url, _type=_type, **kwargs)
+        super().__init__(_id=_id, image_url=image_url, **kwargs)
         self.x = x
         self.y = y
         self.w = w
@@ -141,7 +137,7 @@ class Rectangle(FormSVG):
 
 
 class Marker(FormSVG):
-    def __init__(self, _id, image_url, _type, x, y, **kwargs):
+    def __init__(self, _id, image_url, x, y, **kwargs):
         """
         class for marker form.
         :param _id: Id of your annotation.
@@ -151,7 +147,7 @@ class Marker(FormSVG):
         :param y: coordinate y
         :param kwargs: verbose (boolean, default is false)
         """
-        super().__init__(_id=_id, image_url=image_url, _type=_type, **kwargs)
+        super().__init__(_id=_id, image_url=image_url, **kwargs)
         self.x = x
         self.y = y
         self.w = 10

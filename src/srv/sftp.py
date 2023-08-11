@@ -172,11 +172,12 @@ class Sftp:
         file_list = list(sftp.listdir(path_remote))
 
         def get_size(path_img: str):
-            "To get size of images"
-            Size = namedtuple('Size', ['width', 'height'])
+            """To get size of images
+            :return: tuple, (width, height)
+            """
             with sftp.sftp.open(path_img, 'rb') as f:
-                img = Image.open(f)
-            return Size(width=img.size[0], height=img.size[1])
+                _img = Image.open(f)
+            return _img.size[0], _img.size[1]
 
         # build dict with size for any images
         dict_files = {}

@@ -1,3 +1,4 @@
+import os
 import sys
 import socketserver
 import click
@@ -7,10 +8,11 @@ from iiif_prezi3 import Canvas, ResourceItem, AnnotationPage, Annotation
 from src.data import DataAnnotations
 from src.iiif import AnnotationIIIF, ManifestIIIF, ServicesIIIF, CanvasIIIF, SequenceIIIF
 from src.opt.data_variables import LANGUAGES
-from src.opt.variables import URI_CRC, ENDPOINT_MANIFEST, SCANNERS
+from src.opt.variables import URI_CRC, ENDPOINT_MANIFEST, SCANNERS, ENDPOINT_BASE
 from src.srv.localhost import MyHttpRequestHandler
 from src.srv.sftp import Sftp
 from src.opt.tools import get_default_project
+from path import CURRENT_PATH
 
 
 @click.group()
@@ -33,9 +35,10 @@ def run_manifest():
                                                                     "manifests is automaticaly adding by the script.")
 @click.option("--usage-memory", "usage_memory", type=bool, default=False, is_flag=True, help="To see usage of RAM")
 @click.option("-v", "--verbose", "verbose", type=bool, is_flag=True, help="Get more verbosity")
-def build_manifest(*args, **kwargs):
+def build_manifest(*args, project, **kwargs):
     """
     Build manifest IIIF with standard API Presentation 3.0
+    :param project:
     :param args:
     :param kwargs:
     :return: Manifest API Presentation 3.0
@@ -111,7 +114,8 @@ def build_manifest(*args, **kwargs):
         del url_image, resource_img, service, service_info, canvas_api, _format
 
         # Page annotation for canvas
-        anno_page = AnnotationPage(id=kwargs['server'] + f"page/p{str(n_canvas)}/1")
+        anno_page = AnnotationPage(
+            id=kwargs['server'] + ENDPOINT_BASE + manifest.uri_basename + '&' + f"page/p{str(n_canvas)}/1")
         anno_page.add_item(anno_img)
 
         ############## Write Annotations ##############
@@ -120,7 +124,8 @@ def build_manifest(*args, **kwargs):
 
             forms = annotation.make_forms()
             if n_anno > 10:
-                form_anno = Annotation(id=kwargs['server'] + f"annotation/p{n_canvas:05}-image/anno_{n_anno:01}-svg",
+                form_anno = Annotation(id=kwargs[
+                                              'server'] + ENDPOINT_BASE + manifest.uri_basename + '&' + f"annotation/p{n_canvas:05}-image/anno_{n_anno:01}-svg",
                                        motivation="commenting",  # maybe other
                                        body={"type": "TextualBody",
                                              "language": "fr",
@@ -157,6 +162,15 @@ def build_manifest(*args, **kwargs):
     # build thumbnail manifest
     manifest.build_thumbnail()
     # print(manifest._print_json())
+    with open(os.path.join(CURRENT_PATH, 'output', f'{manifest.uri_basename}.json'), 'w') as outfile:
+        outfile.write(manifest.manifest.json(indent=2, ensure_ascii=False))
+
+    if kwargs['usage_memory']:
+        print("The size of the manifest.canvases is:", sys.getsizeof(manifest.canvases), "bytes.")
+        print("The size of the annotation is:", sys.getsizeof(manifest.annotation), "bytes.")
+        print("The size of the manifest is:", sys.getsizeof(manifest.manifest), "bytes.")
+    # Remove Manifest
+    del manifest
 
     ########################### Build Collections #####################################
 
@@ -164,10 +178,10 @@ def build_manifest(*args, **kwargs):
     # Upload files
     list_img = Sftp.prepare_images()
     for img in list_img:
-        Sftp.upload_images(kwargs['project'], id_=img, imgs=list_img[img], **kwargs)
+        Sftp.upload_images(project=project, id_=img, imgs=list_img[img], verbose=kwargs['verbose'])
 
     # Get list of resources to srv
-    list_img = Sftp.get_list_dir(kwargs['project'])
+    list_img = Sftp.get_list_dir(project)
 
     Error = namedtuple('Error', ['n', 'list_id'])
     error = Error(n=0, list_id=[])
@@ -178,13 +192,19 @@ def build_manifest(*args, **kwargs):
         manifest_scan = ManifestIIIF(
             'https://crc-centre-recherche-conservation.github.io/iiif/iiif/manifest/Avranches_BM_59.json', **kwargs)
         manifest_scan.get_preconfig('/home/maxime/Bureau/projet_crc/IIIF_builder/config/config_example.yaml')
-        manifest_scan.build_manifest(url=manifest_scan.label_url.replace('.json', f'_{analysis}.json'))
+        manifest_scan.uri_basename = manifest_scan.uri_manifest.split('/')[-1].replace('.json', f'_{analysis}')
+        manifest_scan.build_manifest(url=manifest_scan.uri_manifest.replace('.json', f'_{analysis}.json'))
 
         # Hyperspectral and XRF
         if analysis != 'MSP':
             # Get and iter on rows by analysis type
             list_analysis = data.get_type_analysis(_type=analysis)
             for index, row in list_analysis.iterrows():
+
+                # Page annotation for canvas
+                anno_page_scan = AnnotationPage(
+                    id=kwargs['server'] + ENDPOINT_BASE + manifest_scan.uri_basename + '&' + f"page/p{str(index)}/1")
+
                 label_id = row['Name']
                 img_url_1 = row['Reference.1']
 
@@ -234,6 +254,9 @@ def build_manifest(*args, **kwargs):
                                                 body=resource_principal_img,
                                                 target=canvas_img.id)
 
+                # Add annotation to anno page
+                anno_page_scan.add_item(anno_principal_img)
+
                 ##### Build others Images (Scans) #####
                 idx_img = list(filter(lambda x: x.startswith(row['Name']), list(list_img.keys())))
                 # Check if id is empty
@@ -242,27 +265,46 @@ def build_manifest(*args, **kwargs):
                     error.list_id.append(row['Name'])
 
                 for img in idx_img:
-                    sequence_img = SequenceIIIF(kwargs['project'], img, verbose=kwargs['verbose'])
+                    sequence_img = SequenceIIIF(project=project, filename=img, **kwargs)
 
-                    ressource_scan = ResourceItem(id=sequence_img.build_url_V3(),
-                                                  type='dctypes:Image',
-                                                  format=_format if _format is not None else 'image/jpeg',
-                                                  height=list_img[img].height,
-                                                  width=list_img[img].width)
+                    resource_scan = ResourceItem(id=sequence_img.build_url_V3(),
+                                                 type='dctypes:Image',
+                                                 format=_format if _format is not None else 'image/jpeg',
+                                                 height=list_img[img][1],
+                                                 width=list_img[img][0])
 
                     # Add label
-                    ressource_scan.add_label('test: ' + analysis + ', ' + row['Name'], language='fr')
+                    resource_scan.add_label('test: ' + analysis + ', ' + row['Name'], language='fr')
 
                     # Services
-                    ressource_scan.make_service(id=sequence_img.build_uri(),
-                                                type='ImageService3',
-                                                profile='level1')
+                    resource_scan.make_service(id=sequence_img.build_uri(),
+                                               type='ImageService3',
+                                               profile='level2')
+
 
                     # Add to annotation
-                    anno_principal_img = Annotation(id=kwargs['server'] + f"annotation/{label_id}-main-images",
-                                                    motivation="painting",
-                                                    body=ressource_scan,
-                                                    target=canvas_img.id)
+                    anno_img_scan = Annotation(id=kwargs['server'] + f"annotation/{label_id}-main-images",
+                                               motivation="painting",
+                                               body=resource_scan,
+                                               # list_img -> correspond to dict parsing files sftp
+                                               target=canvas_img.id + '#' + sequence_img.get_xwyh(canvas=canvas_img,
+                                                                                                  row=row,
+                                                                                                  image_size=list_img[img]))
+                    # Add annotation to anno page
+                    anno_page_scan.add_item(anno_img_scan)
+
+                # Add annotation by canvas
+                canvas_img.add_item(anno_page_scan)
+                # Add canvas in manifest
+                manifest_scan.manifest.add_item(canvas_img)
+
+        # Multispectral
+        elif analysis == 'MSP':
+            pass
+
+
+        with open(os.path.join(CURRENT_PATH, 'output', f'{manifest_scan.uri_basename}.json'), 'w') as outfile:
+            outfile.write(manifest_scan.manifest.json(indent=2, ensure_ascii=False))
 
     if error.n > 0:
         print(f"Error identifying images from the following identifiers: {', '.join(error.list_id)}.")
@@ -272,14 +314,6 @@ def build_manifest(*args, **kwargs):
     # https://iiif-prezi.github.io/iiif-prezi3/recipes/0230-navdate/#example-3-collection_1
 
     # Pour multispectral suivre -> https://iiif.io/api/cookbook/recipe/0033-choice/
-
-    if kwargs['usage_memory']:
-        print("The size of the manifest.canvases is:", sys.getsizeof(manifest.canvases), "bytes.")
-        print("The size of the annotation is:", sys.getsizeof(manifest.annotation), "bytes.")
-        print("The size of the manifest is:", sys.getsizeof(manifest.manifest), "bytes.")
-
-    with open('output/manifest_MS_59_CRC.json', 'w') as outfile:
-        outfile.write(manifest.manifest.json(indent=2, ensure_ascii=False))
 
 
 @run_manifest.command()

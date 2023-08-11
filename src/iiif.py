@@ -67,11 +67,17 @@ class ManifestIIIF(IIIF):
     metadata = []
     seealso = []
 
-    def __init__(self, uri, label=None, **kwargs):
+    def __init__(self, uri, **kwargs):
+        """
+        :param uri: str url, Original manifest
+        :param kwargs: verbose
+        """
         super().__init__(
             uri=uri, **kwargs)
         self.label = self._build_label()
-        self.label = label
+        # Variable for new manifest
+        self.uri_basename = self._build_uri_basename()
+        self.uri_manifest = self._build_uri()
 
     def _print_json(self):
         return self.manifest.json(indent=2, ensure_ascii=False)
@@ -79,8 +85,11 @@ class ManifestIIIF(IIIF):
     def _build_label(self):
         return self.json['label'] + ", analyses physico-chimique @CRC"
 
-    def _build_label_url(self):
-        return self.server + ENDPOINT_MANIFEST + self.uri.split('/')[-1].replace('.json', '') + '_CRC' + '.json'
+    def _build_uri_basename(self):
+        return str(self.uri.split('/')[-1].replace('.json', '') + '_CRC')
+
+    def _build_uri(self):
+        return DOMAIN_IIIF_HTTPS + ENDPOINT_MANIFEST + self.uri_basename + '.json'
 
     def get_metadata(self):
         if self.verbose:
@@ -105,17 +114,16 @@ class ManifestIIIF(IIIF):
                     print(self.label)
 
             if config_yaml['manifest'].upper() != "DEFAULT":
-                self.label_url = self.server + ENDPOINT_MANIFEST + config_yaml['manifest'].replace(' ', '_') + '.json'
+                self.uri_basename = config_yaml['manifest'].replace(' ', '_')
+                self.uri_manifest = DOMAIN_IIIF_HTTPS + ENDPOINT_MANIFEST + config_yaml['manifest'].replace(' ', '_') + '.json'
                 if self.verbose:
-                    print(self.label_url)
-
+                    print(self.uri_manifest)
 
             # Description
             if config_yaml['description'].upper() != 'NONE':
                 self.description = config_yaml['description']
                 if self.verbose:
                     print(self.description)
-
 
             # Licence
             if config_yaml['licence']['label'].upper() != 'DEFAULT':
@@ -188,7 +196,7 @@ class ManifestIIIF(IIIF):
             self.metadata = None
         # Option personalisation url
         if url is None:
-            url = self.label_url
+            url = self.uri_manifest
 
         # Build Manifest
         self.manifest = Manifest(
@@ -354,9 +362,7 @@ class AnnotationIIIF:
         self.data = data
         self.uri = uri
         self.canvas = canvas
-        self.verbose = kwargs.get('verbose', False)
-
-
+        self.verbose = kwargs['verbose']
 
     def make_forms(self) -> str:
         """
@@ -367,32 +373,33 @@ class AnnotationIIIF:
         if isinstance(self.data['Type'], str):
             # RECTANGLE
             if self.data['Type'].upper() == 'RECTANGLE':
-                rectangle = Rectangle(_id=self.data['Name'], image_url=self.uri, _type=self.data['Type_analysis'],
-                                      x=self.data['Coordinates']['x'], y=self.data['Coordinates']['y'],
-                                      w=self.data['Coordinates']['w'], h=self.data['Coordinates']['h'],
-                                      verbose=self.verbose)
+                rectangle = Rectangle(_id=self.data['Name'], image_url=self.uri, x=self.data['Coordinates']['x'],
+                                      y=self.data['Coordinates']['y'], w=self.data['Coordinates']['w'],
+                                      h=self.data['Coordinates']['h'], verbose=self.verbose)
                 # check dimension image and form
-                rectangle.check_dim_manifest(self.canvas)
+                rectangle.check_dim_manifest(canvas_h=self.canvas['images'][0]['resource']['height'],
+                                             canvas_w=self.canvas['images'][0]['resource']['width'])
                 dimension = rectangle.dim_img_origin if rectangle.dim_img_origin is not None else rectangle.image_size
                 # fit dimension
-                balise = rectangle.get_svg()
+                tag = rectangle.get_svg()
                 # get xywh dimension
                 self.xywh = str(rectangle.x) + ',' + str(rectangle.y) + ',' + str(rectangle.w) + ',' + str(rectangle.h)
 
             # MARKER
             elif self.data['Type'].upper() == 'MARKER':
-                marker = Marker(_id=self.data['Name'], image_url=self.uri, _type=self.data['Type_analysis'],
-                                x=self.data['Coordinates']['x'], y=self.data['Coordinates']['y'], verbose=self.verbose)
-                #check dimension image and form
-                marker.check_dim_manifest(self.canvas)
+                marker = Marker(_id=self.data['Name'], image_url=self.uri, x=self.data['Coordinates']['x'],
+                                y=self.data['Coordinates']['y'], verbose=self.verbose)
+                # check dimension image and form
+                marker.check_dim_manifest(canvas_h=self.canvas['images'][0]['resource']['height'],
+                                          canvas_w=self.canvas['images'][0]['resource']['width'])
                 dimension = marker.dim_img_origin if marker.dim_img_origin is not None else marker.image_size
                 # fit dimension
-                balise = marker.get_svg()
+                tag = marker.get_svg()
                 # get xywh dimension
                 self.xywh = str(marker.x) + ',' + str(marker.y) + ',' + str(marker.w) + ',' + str(marker.h)
             else:
                 raise ValueError("The data annotation type need to be 'rectangle' or 'marker'")
-            return f"""<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="{str(dimension[0])}" height="{str(dimension[1])}" xmlns:xlink="http://www.w3.org/1999/xlink">{balise}</svg>"""
+            return f"""<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="{str(dimension[0])}" height="{str(dimension[1])}" xmlns:xlink="http://www.w3.org/1999/xlink">{tag}</svg>"""
         else:
             raise TypeError('The data annotation type need to be string.')
 
@@ -432,14 +439,15 @@ class AnnotationIIIF:
 
 class SequenceIIIF:
     formats = {'jpg': 'image/jpeg',
-              'jpeg': 'image/jpeg',
-              'tif': ' image/tiff',
-              'tiff': 'image/tiff',
-              'png': ' image/png',
-              'gif': 'image/gif',
-              'jp2': 'image/gjp2',
-              'webp': 'image/webp',
-              'pdf': 'application/pdf'}
+               'jpeg': 'image/jpeg',
+               'tif': ' image/tiff',
+               'tiff': 'image/tiff',
+               'png': ' image/png',
+               'gif': 'image/gif',
+               'jp2': 'image/gjp2',
+               'webp': 'image/webp',
+               'pdf': 'application/pdf'}
+
     def __init__(self, project: str, filename: str, **kwargs):
         self.filename = filename
         self.project = project
@@ -495,16 +503,24 @@ class SequenceIIIF:
         except KeyError:
             return None, None
 
-class XRF(SequenceIIIF):
+    def get_xwyh(self, canvas, row, image_size):
+        """
 
-    def __init__(self, project: str, filename: str, **kwargs):
-        super().__init__(project, filename, **kwargs)
+        :param canvas: Canvas, canvas image configuration
+        :param row: Dataframe, row selected of value
+        :param image_size: tuple, (width, height)
+        :return: str, w,x,y,h
+        """
 
-class Hyperspectral(SequenceIIIF):
-    pass
-
-class Multispectral(SequenceIIIF):
-    pass
+        rectangle = Rectangle(_id=row['Name'], x=row['X'], y=row['Y'],
+                              w=row['W'], h=row['H'], verbose=self.verbose)
+        rectangle.image_size = ()
+        # check dimension image and form and fit
+        rectangle.check_dim_manifest(canvas_h=canvas.height,
+                                     canvas_w=canvas.width,
+                                     image_size=image_size)
+        # get xywh dimension
+        return str(rectangle.x) + ',' + str(rectangle.y) + ',' + str(rectangle.w) + ',' + str(rectangle.h)
 
 # pour xrf et hyperspectra
 # https://iiif.io/api/cookbook/recipe/0033-choice/
