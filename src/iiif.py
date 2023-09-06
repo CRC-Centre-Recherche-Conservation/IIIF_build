@@ -440,9 +440,9 @@ class AnnotationIIIF:
 class SequenceIIIF:
     formats = {'jpg': 'image/jpeg',
                'jpeg': 'image/jpeg',
-               'tif': ' image/tiff',
+               'tif': 'image/tiff',
                'tiff': 'image/tiff',
-               'png': ' image/png',
+               'png': 'image/png',
                'gif': 'image/gif',
                'jp2': 'image/gjp2',
                'webp': 'image/webp',

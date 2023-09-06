@@ -34,6 +34,7 @@ def run_manifest():
                                                                     "url : https://data.crc.fr/iiif/. The path "
                                                                     "manifests is automaticaly adding by the script.")
 @click.option("--usage-memory", "usage_memory", type=bool, default=False, is_flag=True, help="To see usage of RAM")
+@click.option("-N", "--NO-SSH", "no_ssh", type=bool, is_flag=True, help="To disable data transfer via SSH to the IIIF server. For example, if you want to run certain tests or if files have already been uploaded.")
 @click.option("-v", "--verbose", "verbose", type=bool, is_flag=True, help="Get more verbosity")
 def build_manifest(*args, project, **kwargs):
     """
@@ -176,9 +177,10 @@ def build_manifest(*args, project, **kwargs):
 
     ############## Make Scanners Manifest's ##############
     # Upload files
-    list_img = Sftp.prepare_images()
-    for img in list_img:
-        Sftp.upload_images(project=project, id_=img, imgs=list_img[img], verbose=kwargs['verbose'])
+    if kwargs['no_ssh'] is False:
+        list_img = Sftp.prepare_images()
+        for img in list_img:
+            Sftp.upload_images(project=project, id_=img, imgs=list_img[img], verbose=kwargs['verbose'])
 
     # Get list of resources to srv
     list_img = Sftp.get_list_dir(project)
@@ -199,11 +201,16 @@ def build_manifest(*args, project, **kwargs):
         if analysis != 'MSP':
             # Get and iter on rows by analysis type
             list_analysis = data.get_type_analysis(_type=analysis)
-            for index, row in list_analysis.iterrows():
+
+            canvas_images = {}
+
+            #print(list_analysis)
+            for index, row in list_analysis.sort_values(by='Reference.1').iterrows():
 
                 # Page annotation for canvas
                 anno_page_scan = AnnotationPage(
                     id=kwargs['server'] + ENDPOINT_BASE + manifest_scan.uri_basename + '&' + f"page/p{str(index)}/1")
+
 
                 label_id = row['Name']
                 img_url_1 = row['Reference.1']
@@ -211,51 +218,61 @@ def build_manifest(*args, project, **kwargs):
                 ##### Build 1st Canvas and Image #####
                 canvas = manifest_scan.canvases[img_url_1]
                 # Canvas entities
-                canvas_img = Canvas(id=canvas['@id'],
-                                    label=canvas['label'],
-                                    width=canvas['width'],
-                                    height=canvas['height'])
 
-                # Service Image
-                uri_info = canvas['images'][0]['on']
-                # get info services
-                service = ServicesIIIF(uri_info, **kwargs)
-                # Get canvas parameters
-                url_image = canvas['images'][0]['resource']['@id']
-                canvas_api = CanvasIIIF(url_image, verbose=kwargs['verbose'])
-                # verify api parameters and format
-                url_image = canvas_api.check_size(service.api)
-                _format = canvas_api.build_format()
-                resource_principal_img = ResourceItem(id=url_image,
-                                                      type=canvas['images'][0]['resource']['@type'],
-                                                      format=_format if _format is not None else
-                                                      canvas['images'][0]['resource']['format'],
-                                                      # To get correct format, but if error you got original format
-                                                      height=canvas['images'][0]['resource']['height'],
-                                                      width=canvas['images'][0]['resource']['width'])
+                if img_url_1 not in canvas_images:
+                    # New canvas
+                    canvas_img = Canvas(id=canvas['@id'],
+                                        label=canvas['label'],
+                                        width=canvas['width'],
+                                        height=canvas['height'])
 
-                # Add service to image
-                ## API Presentation 2.0 - 2.1 (related to original manifest)
-                if manifest_scan.api < 3.0:
-                    service_info = service.get_info_image()
-                    # build service
-                    resource_principal_img.make_service(id=uri_info.replace('/info.json', ''),
-                                                        type=service_info.type,
-                                                        profile='level1')  # maybe level1
-                ## For Presentation API 3.0
+                    # Service Image
+                    uri_info = canvas['images'][0]['on']
+                    # get info services
+                    service = ServicesIIIF(uri_info, **kwargs)
+                    # Get canvas parameters
+                    url_image = canvas['images'][0]['resource']['@id']
+                    canvas_api = CanvasIIIF(url_image, verbose=kwargs['verbose'])
+                    # verify api parameters and format
+                    url_image = canvas_api.check_size(service.api)
+                    _format = canvas_api.build_format()
+                    resource_principal_img = ResourceItem(id=url_image,
+                                                          type=canvas['images'][0]['resource']['@type'],
+                                                          format=_format if _format is not None else
+                                                          canvas['images'][0]['resource']['format'],
+                                                          # To get correct format, but if error you got original format
+                                                          height=canvas['images'][0]['resource']['height'],
+                                                          width=canvas['images'][0]['resource']['width'])
+
+                    # Add service to image
+                    ## API Presentation 2.0 - 2.1 (related to original manifest)
+                    if manifest_scan.api < 3.0:
+                        service_info = service.get_info_image()
+                        # build service
+                        resource_principal_img.make_service(id=uri_info.replace('/info.json', ''),
+                                                            type=service_info.type,
+                                                            profile='level1')  # maybe level1
+                    ## For Presentation API 3.0
+                    else:
+                        resource_principal_img.make_service(id=canvas['items'][0]['items'][0]['service'][0]['@id'],
+                                                            type=canvas['items'][0]['items'][0]['service'][0]['type'],
+                                                            profile='level1')
+
+                    # Annotation for add resource image in canvas
+                    anno_principal_img = Annotation(id=kwargs['server'] + f"annotation/{label_id}-main-images",
+                                                    motivation="painting",
+                                                    body=resource_principal_img,
+                                                    target=canvas_img.id)
+
+                    # Add annotation to anno page
+                    anno_page_scan.add_item(anno_principal_img)
+
+                    # Add new canvas to dict
+                    canvas_images[img_url_1] = canvas_img
+
                 else:
-                    resource_principal_img.make_service(id=canvas['items'][0]['items'][0]['service'][0]['@id'],
-                                                        type=canvas['items'][0]['items'][0]['service'][0]['type'],
-                                                        profile='level1')
+                    canvas_img = canvas_images[img_url_1]
 
-                # Annotation for add resource image in canvas
-                anno_principal_img = Annotation(id=kwargs['server'] + f"annotation/{label_id}-main-images",
-                                                motivation="painting",
-                                                body=resource_principal_img,
-                                                target=canvas_img.id)
-
-                # Add annotation to anno page
-                anno_page_scan.add_item(anno_principal_img)
 
                 ##### Build others Images (Scans) #####
                 idx_img = list(filter(lambda x: x.startswith(row['Name']), list(list_img.keys())))
@@ -269,7 +286,7 @@ def build_manifest(*args, project, **kwargs):
 
                     resource_scan = ResourceItem(id=sequence_img.build_url_V3(),
                                                  type='dctypes:Image',
-                                                 format=_format if _format is not None else 'image/jpeg',
+                                                 format=sequence_img.format if sequence_img.format is not None else 'image/jpeg',
                                                  height=list_img[img][1],
                                                  width=list_img[img][0])
 
@@ -295,8 +312,11 @@ def build_manifest(*args, project, **kwargs):
 
                 # Add annotation by canvas
                 canvas_img.add_item(anno_page_scan)
-                # Add canvas in manifest
-                manifest_scan.manifest.add_item(canvas_img)
+                # Add update canvas
+                canvas_images[img_url_1] = canvas_img
+            # Add canvas in manifest
+            for url_base in canvas_images:
+                manifest_scan.manifest.add_item(canvas_images[url_base])
 
         # Multispectral
         elif analysis == 'MSP':
