@@ -189,11 +189,9 @@ def build_manifest(*args, project, **kwargs):
     error = Error(n=0, list_id=[])
 
     # Iter on analysis
-    for analysis in SCANNERS:
-
+    for n, analysis in enumerate(SCANNERS):
         manifest_scan = ManifestIIIF(
             'https://crc-centre-recherche-conservation.github.io/iiif/iiif/manifest/Avranches_BM_59.json', **kwargs)
-        manifest_scan.get_preconfig('/home/maxime/Bureau/projet_crc/IIIF_builder/config/config_example.yaml')
         manifest_scan.uri_basename = manifest_scan.uri_manifest.split('/')[-1].replace('.json', f'_{analysis}')
         manifest_scan.build_manifest(url=manifest_scan.uri_manifest.replace('.json', f'_{analysis}.json'))
 
