@@ -155,7 +155,7 @@ class ManifestIIIF(IIIF):
             # Metadata
             for n, data in enumerate(config_yaml['metadata']['data-source']):
                 if data['url'] is not None:
-                    self.metadata.append(KeyValueString(label=f"Sources des données {str(n)}", value=data['url']))
+                    self.metadata.append(KeyValueString(label=f"Source des données ({str(n + 1)})", value=data['url']))
 
             tech = []
             for technique in config_yaml['metadata']['technique']:
@@ -166,7 +166,7 @@ class ManifestIIIF(IIIF):
 
             # Authors
             for n, author in enumerate(config_yaml['authors']):
-                if n == 1:
+                if n == 0:
                     self.metadata.append(
                         KeyValueString(label='Responsable Scientifique', value=author['name'].upper() + " " +
                                                                                author['forename'] if author[
