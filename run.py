@@ -282,20 +282,29 @@ def build_manifest(*args, project, **kwargs):
                 for img in idx_img:
                     sequence_img = SequenceIIIF(project=project, filename=img, **kwargs)
 
-                    resource_scan = ResourceItem(id=sequence_img.build_url_V3(),
+                    url_image_scan = sequence_img.build_url_V3()
+
+
+                    resource_scan = ResourceItem(id=url_image_scan,
                                                  type='dctypes:Image',
                                                  format=sequence_img.format if sequence_img.format is not None else 'image/jpeg',
                                                  height=list_img[img][1],
                                                  width=list_img[img][0])
 
-                    # Add label
-                    resource_scan.add_label('test: ' + analysis + ', ' + row['Name'], language='fr')
+
+                    if analysis == 'sXRF':
+                        try:
+                            label = sequence_img.get_mtda_xrf(url_image_scan)
+                        except KeyError:
+                            print(url_image_scan)
+                    elif analysis == 'HS_SWIR' or analysis == 'HS_VNIR':
+                        label = sequence_img.get_mtda_hs(url_image_scan)
+                    resource_scan.add_label(str(label), language='fr')
 
                     # Services
                     resource_scan.make_service(id=sequence_img.build_uri(),
                                                type='ImageService3',
                                                profile='level2')
-
 
                     # Add to annotation
                     anno_img_scan = Annotation(id=kwargs['server'] + f"annotation/{label_id}-main-images",
