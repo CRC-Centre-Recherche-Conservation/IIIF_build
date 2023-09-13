@@ -1,11 +1,14 @@
+import re
 import pandas as pd
 import requests
 import yaml
 from collections import namedtuple
+from urllib.parse import urlparse
 from yaml.loader import SafeLoader
 from iiif_prezi3 import Manifest, KeyValueString, config, ExternalItem, ResourceItem
 
 from src.opt.variables import DOMAIN_IIIF_HTTPS, ENDPOINT_API_IMG_3, ENDPOINT_API_IMG_2, ENDPOINT_MANIFEST
+from src.opt.data_variables import PERIODIC_TAB_FR
 from .forms import Rectangle, Marker
 
 
@@ -521,6 +524,170 @@ class SequenceIIIF:
                                      image_size=image_size)
         # get xywh dimension
         return str(rectangle.x) + ',' + str(rectangle.y) + ',' + str(rectangle.w) + ',' + str(rectangle.h)
+
+    @staticmethod
+    def get_mtda_xrf(url: str) -> str:
+        """
+        To get metadata for XRF scanning in image title.
+        example:
+        sXRF_3&MS59_f1V_zoomx-deconv_Fe.tif
+        sXRF_4&Map_data-Ms59-f2-deconv-Cu-lim255.tif
+        sXRF_5&Ms59-f13v_deconv_sansHg-Cu.tif
+
+        :param url: url: str, url of image
+        :return:
+        """
+        # list of metadata
+        mtda = []
+
+        url_parse = urlparse(url).path
+
+        # compile
+        el_chem = re.compile(r'_([A-Z][a-z]?)')  # get group1
+        without_el = re.compile(r'sans([A-Z][a-z]?)-([A-Z][a-z]?)')
+        lim = re.compile(r'lim(\d+)')
+
+        # searcher
+        el_chem_match = el_chem.search(url_parse)
+        without_el_match = without_el.search(url_parse)
+        lim_match = lim.search(url_parse)
+
+        # getting methodology
+        if url_parse.find('deconv'):
+            mtda.append('Méthodologie: ' + 'Déconvolution')
+        # getting elements
+        if el_chem_match:
+            el_chem_txt = el_chem_match.group(1)
+            mtda.append(f'Élement chimique: {PERIODIC_TAB_FR[el_chem_txt]} ({el_chem_txt})')
+        # get without element (Hg-sans-Cu) -> Cu
+        elif without_el_match:
+            el_without_txt = without_el_match.group(2)
+            eliminated = without_el_match.group(1)
+            mtda.append(f'Élement chimique: {PERIODIC_TAB_FR[el_without_txt]} ({el_without_txt}) \n'
+                        f'Élimination: {PERIODIC_TAB_FR[eliminated]} ({eliminated})')
+        # getting limits
+        if lim_match:
+            limit = lim_match.group(1)
+            mtda.append(f'Limite (par coups): {limit}')
+
+        return '\n'.join(mtda)
+
+    @staticmethod
+    def get_mtda_hs(url: str) -> str:
+        """
+        To get metadata for Hyperspectral scanning in image title.
+
+        exemple of urls
+        https://192.168.122.28:8183/iiif/3/HS_SWIR_5&Ms59-f42-obj56-frame100-dist43-SWIR_kubelkamunk-unmix_rule_rouge_noirci.png/full/max/0/default.tif
+        https://192.168.122.28:8183/iiif/3/HS_VNIR_6&Ms59-f53v-obj23-frame100-1_derivate5-1-2-grey-band237-456-75-contraste.png/full/max/0/default.tif
+        https://192.168.122.28:8183/iiif/3/HS_VNIR_1&Ms59-f1v-obj23-frame100-1_refl_mnf4.png/full/max/0/default.tif
+        https://192.168.122.28:8183/iiif/3/HS_SWIR_2&Ms59-f2-obj56-frame100-dist43-SWIR-1_continuum_removal-61-115-1-s-MTMF_blanc_pb.png/full/max/0/default.tif
+
+        :param url: str, url of image
+        :return: list, all elements to aggregate
+        """
+
+        # list mtda
+        mtda = []
+
+        # No chemical element, so lower
+        url_parse = urlparse(url).path.lower()
+
+        # distance (object / lens)
+        dist = re.compile(r'dist(\d+)')
+        dist_match = dist.search(url_parse)
+        if dist_match:
+            mtda.append(f"Distance (objet/objectif): {dist_match.group(1)}")
+
+        # Reference spectrum
+        objet = url_parse.split('_')[-1].split('.')[0]
+        if not objet.startswith(('derivate', 'mnf', 'pca')):
+            try:
+                mtda.append(f"Spectre de référence: {objet.replace('-', ' ')}")
+            except IndexError:
+                mtda.append(f"Spectre de référence: {objet.replace('-', ' ')}")
+
+        # Mapping processing (can have multiple processing)
+        techs = {'_mtmf_': 'Mixture Tuned Matched Filtering',
+                 '_sam_': 'Spectral Angle Mapper',
+                 '_sff_': 'Spectral Feature Fitting',
+                 '_unmix_': 'Unmixing',
+                 '_kubelkamunk_': 'kubelkamunk'}
+
+        n_tech = []
+        for tech_key, tech_name in techs.items():
+            if tech_key in url_parse:
+                n_tech.append(tech_name)
+        if len(n_tech) < 0:
+            mtda.append(f"Traitements pour la cartographie: {', '.join(n_tech)}")
+
+        # Lens focal length (mm)
+        obj = re.compile(r'obj(\d+)')
+        obj_match = obj.search(url_parse)
+        if dist_match:
+            mtda.append(f"Objectif (mm): {obj_match.group(1)}")
+
+        # Band numbers
+        band = re.compile(r'band(\d+)(-\d+)*')
+        band_match = band.search(url_parse)
+        if band_match:
+            band_list = (band_match.group(0).replace('band', '').split('-'))
+            mtda.append(f"Numéros de bandes: {', '.join(band_list)}")
+
+        # Derivate
+        deriv = re.compile(r'derivate(\d+)-(\d+)-(\d+)')
+        deriv_match = deriv.search(url_parse)
+        if deriv_match:
+            mtda.append(
+                f"Dérivé (algorithme de Savitzky-Golay): {deriv_match.group(1)}, {deriv_match.group(2)}, {deriv_match.group(3)}")
+
+        # Color
+        if 'grey' in url_parse:
+            if 'contraste' in url_parse:
+                mtda.append('Couleur: Nuances de gris, contraste')
+            else:
+                mtda.append('Couleur: Nuances de gris')
+        elif 'rgb' in url_parse:
+            if 'contraste' in url_parse:
+                mtda.append('Couleur: RGB, contraste')
+            else:
+                mtda.append('Couleur: RGB')
+
+        # Statistical processing
+        stat = re.compile(r'(mnf|pca)(\d+)')
+        stat_match = stat.search(url_parse)
+        if stat_match:
+            mtda.append(f"Traitement statistique: {stat_match.group(1)} {stat_match.group(2)}")
+
+        # Pixel aggregation
+        if 'pixel_aggregate' in url_parse:
+            mtda.append('Aggrégation de pixels: Oui')
+        else:
+            mtda.append('Aggrégation de pixels: Non')
+
+        # Subtracting the baseline
+        continuum = re.compile(r'continuum_removal-(\d+)-(\d+)(-1-s)?')
+        continuum_match = continuum.search(url_parse)
+        if continuum_match:
+            try:
+                continuum_match.groups(3)
+                mtda.append(
+                    f"Soustraction de la ligne de base: Entre {continuum_match.group(1)} et {continuum_match.group(2)} (spectres rendus positifs).")
+            except IndexError:
+                mtda.append(
+                    f"Soustraction de la ligne de base: Entre {continuum_match.group(1)} et {continuum_match.group(2)}.")
+
+        return '\n'.join(mtda)
+    def get_mtda_msp(self, url: str):
+        """
+        To get metadata for Multispectral scanning in image title.
+        :param url:
+        :return:
+        """
+        methods = ['IR', 'IRFC', 'UVFC', 'VIS', 'UVF', 'UVF2', 'UVR']
+        pass
+
+
 
 # pour xrf et hyperspectra
 # https://iiif.io/api/cookbook/recipe/0033-choice/
