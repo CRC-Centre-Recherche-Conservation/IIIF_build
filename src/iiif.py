@@ -570,7 +570,7 @@ class SequenceIIIF:
             limit = lim_match.group(1)
             mtda.append(f'Limite (par coups): {limit}')
 
-        return '\n'.join(mtda)
+        return mtda
 
     @staticmethod
     def get_mtda_hs(url: str) -> str:
@@ -677,7 +677,7 @@ class SequenceIIIF:
                 mtda.append(
                     f"Soustraction de la ligne de base: Entre {continuum_match.group(1)} et {continuum_match.group(2)}.")
 
-        return '\n'.join(mtda)
+        return mtda
     def get_mtda_msp(self, url: str):
         """
         To get metadata for Multispectral scanning in image title.

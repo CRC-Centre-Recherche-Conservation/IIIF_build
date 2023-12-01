@@ -294,12 +294,13 @@ def build_manifest(*args, project, **kwargs):
 
                     if analysis == 'sXRF':
                         try:
-                            label = sequence_img.get_mtda_xrf(url_image_scan)
+                            labels = sequence_img.get_mtda_xrf(url_image_scan)
                         except KeyError:
                             print(url_image_scan)
                     elif analysis == 'HS_SWIR' or analysis == 'HS_VNIR':
-                        label = sequence_img.get_mtda_hs(url_image_scan)
-                    resource_scan.add_label(str(label), language='fr')
+                        labels = sequence_img.get_mtda_hs(url_image_scan)
+                    for label in labels:
+                        resource_scan.add_label(str(label), language='fr')
 
                     # Services
                     resource_scan.make_service(id=sequence_img.build_uri(),
