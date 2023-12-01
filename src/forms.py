@@ -9,29 +9,29 @@ class FormSVG(object):
     ratio = None
     dim_img_origin = None
 
-    def __init__(self, _id: str, _type: str, image_url: str, **kwargs):
+    def __init__(self, _id: str, image_url, **kwargs):
         """
         General initalisation of form class to svg.
         :param _id: Id of your annotation.
         :param type: Type of analysis in your annotation
-        :param image_url: URI of API image
+        :param image_url: str, URI of API image
         :param kwargs: verbose
         """
         self.redimension = False
-        if image_url.startswith('https://') or image_url.startswith('http://'):
-            # col 'Name' in csv
-            self.id = _id
-            # col Type
-            self.type = _type
-            # col References -> API image
-            self.image_url = image_url
-            # tuple (width, height)
-            self.image_size = self._get_dim_img()
+        # col 'Name' in csv
+        self.id = _id
+        # Check with Size with request
+        self.verbose = kwargs['verbose']
+        if image_url is not None:
+            assert isinstance(image_url, str), "Variable [image_url] must be of type string to be used."
+            if image_url.startswith('https://') or image_url.startswith('http://'):
+                # col References -> API image
+                self.image_url = image_url
+                # tuple (width, height)
+                self.image_size = self._get_dim_img()
 
-            # Other
-            self.verbose = kwargs.get('verbose', False)
-        else:
-            raise ValueError("You need to indicate an URI of your licence. Need to start by http or https protocols")
+            else:
+                raise ValueError("You need to indicate an URI of your licence. Need to start by http or https protocols")
 
     @property
     def redimension(self) -> bool:
@@ -79,22 +79,20 @@ class FormSVG(object):
         ratio_h = height / self.image_size[1]
         return ratio_w, ratio_h
 
-    def check_dim_manifest(self, canvas):
+    def check_dim_manifest(self, canvas_w: int, canvas_h: int, image_size=None):
         """
         To get dimension of original image.
-        :param canvas: canvas json part in manifest
+        :param canvas_w: int, canvas width
+        :param canvas_h: int, canvas height
+        :param image_size: tuple,
         :return: None
         """
-
-        Size = namedtuple('Size', ['w', 'h'])
-        img_manifest = Size(h=canvas['images'][0]['resource']['height'], w=canvas['images'][0]['resource']['width'])
-
-        assert isinstance(img_manifest,
-                          Size), "We can't get the dimension of the canvas of original image in the manifest."
-
-        if self.image_size[0] != img_manifest.w or self.image_size[1] != img_manifest.h:
+        if image_size is not None:
+            assert isinstance(image_size, tuple), '[image_size] need to be a tuple (width, height)'
+            self.image_size = image_size
+        if self.image_size[0] != canvas_w or self.image_size[1] != canvas_h:
             # get tuple with original dimension
-            self.dim_img_origin = (img_manifest.w, img_manifest.h)
+            self.dim_img_origin = (canvas_w, canvas_h)
             # Indication of change status -> run property function
             self.redimension = True
 
@@ -103,7 +101,7 @@ class FormSVG(object):
 
 
 class Rectangle(FormSVG):
-    def __init__(self, _id, image_url, _type, x, y, w, h, **kwargs):
+    def __init__(self, _id, x, y, w, h, image_url=None, **kwargs):
         """
         class for rectangle form.
         :param _id: Id of your annotation.
@@ -115,7 +113,7 @@ class Rectangle(FormSVG):
         :param h: coordinate w (height)
         :param kwargs: verbose (boolean, default is false)
         """
-        super().__init__(_id=_id, image_url=image_url, _type=_type, **kwargs)
+        super().__init__(_id=_id, image_url=image_url, **kwargs)
         self.x = x
         self.y = y
         self.w = w
@@ -139,7 +137,7 @@ class Rectangle(FormSVG):
 
 
 class Marker(FormSVG):
-    def __init__(self, _id, image_url, _type, x, y, **kwargs):
+    def __init__(self, _id, image_url, x, y, **kwargs):
         """
         class for marker form.
         :param _id: Id of your annotation.
@@ -149,11 +147,11 @@ class Marker(FormSVG):
         :param y: coordinate y
         :param kwargs: verbose (boolean, default is false)
         """
-        super().__init__(_id=_id, image_url=image_url, _type=_type, **kwargs)
+        super().__init__(_id=_id, image_url=image_url, **kwargs)
         self.x = x
         self.y = y
-        self.w = 5
-        self.h = 5
+        self.w = 10
+        self.h = 10
 
     def fit(self):
         """
@@ -168,4 +166,8 @@ class Marker(FormSVG):
         to build svg object in html with the data of your annotation.
         :return: str, html <path>
         """
-        return f"""<path d="M{str(self.x)},{str(self.y)}c0,-3.0303 1.51515,-6.06061 4.54545,-9.09091c0,-2.51039 -2.03507,-4.54545 -4.54545,-4.54545c-2.51039,0 -4.54545,2.03507 -4.54545,4.54545c3.0303,3.0303 4.54545,6.06061 4.54545,9.09091z" id="{self.id}" fill-opacity="0" fill="#00f000" stroke="{str("color")}" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="10"/>"""
+        # !!!!!!!! : passer  à l'échelle, utiliser la fonction scale !!!!!!!!!
+        # https://yqnn.github.io/svg-path-editor/
+        # base 1:1 "M{str(self.x)},{str(self.y)}c0,-3.0303 1.51515,-6.06061 4.54545,-9.09091c0,-2.51039 -2.03507,-4.54545 -4.54545,-4.54545c-2.51039,0 -4.54545,2.03507 -4.54545,4.54545c3.0303,3.0303 4.54545,6.06061 4.54545,9.09091z" id="{self.id}" fill-opacity="0" fill="#00f000" stroke="{str("color")}" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="10"/>"""
+        # ICI base 20:20
+        return f"""<path d="M{str(self.x)},{str(self.y)} c 0 -60.606 30.303 -121.2122 90.909 -181.8182 c 0 -50.2078 -40.7014 -90.909 -90.909 -90.909 c -50.2078 0 -90.909 40.7014 -90.909 90.909 c 60.606 60.606 90.909 121.2122 90.909 181.8182 z" fill-opacity="0" fill="#00f000" stroke="{str("color")}" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="10"/>"""

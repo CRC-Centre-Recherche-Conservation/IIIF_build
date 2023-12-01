@@ -2,10 +2,22 @@
 
 MICROSCOPY = ['mVis', 'mUV', 'mIR']
 MICROSCOPY_TARGET = 'image'
+SCANNERS = {'sXRF': 'Scanner de Spectrométrie par Fluorescence des rayons X',
+            'HS_SWIR': 'Hyperspectral Infrarouge Court',
+            'HS_VNIR': 'Hyperspectral Visible et Proche Infrarouge',
+            'MSP': 'Image Multispectrale'}
 
 #### LINKS ####
+# IIIF Manifest
+URI_CRC = "https://crc-centre-recherche-conservation.github.io/"
+ENDPOINT_MANIFEST = "iiif/iiif/manifest/"
+ENDPOINT_BASE = "iiif/"
 
-URI_CRC = "https://data.crc.fr/iiif/"
+# IIIF SRV
+DOMAIN_IIIF_HTTP = 'http://192.168.122.28:8182/'
+DOMAIN_IIIF_HTTPS = 'https://192.168.122.28:8183/'
+ENDPOINT_API_IMG_3 = 'iiif/3/'
+ENDPOINT_API_IMG_2 = 'iiif/2/'
 
 #### CSV ####
 USEFULL_CSV = ['Basis of Record',

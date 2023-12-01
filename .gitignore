@@ -1,4 +1,9 @@
 .env/
-__pychache__/
+venv/
 .idea/
 data/
+**/*.pyc
+__pychache__/
+test.py
+.env
+output/

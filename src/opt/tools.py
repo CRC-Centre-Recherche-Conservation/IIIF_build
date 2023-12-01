@@ -1,6 +1,28 @@
 import matplotlib.colors as mcolors
 import random
+import os
+from urllib.parse import urlparse
 
+from path import CURRENT_PATH
+
+
+def get_default_project():
+    """
+    Get Default Project name
+    :return: str
+    """
+    dirs = os.listdir(os.path.join(CURRENT_PATH, 'data', 'data_files'))
+    if len(dirs) > 1:
+        print("There is more than one project in the 'data_files' folder. Please, keep only one project.")
+        exit(0)
+    return str(dirs[0])
+
+def uri_validator(x):
+    try:
+        result = urlparse(x)
+        return all([result.scheme, result.netloc])
+    except:
+        return False
 
 class Color:
     def __init__(self, list_color):
