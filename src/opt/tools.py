@@ -4,7 +4,7 @@ import os
 from urllib.parse import urlparse
 
 from path import CURRENT_PATH
-
+from src.opt.variables import USEFULL_SCAN
 
 def get_default_project():
     """
@@ -24,6 +24,12 @@ def uri_validator(x):
     except:
         return False
 
+def check_img_validity(filename: str) -> bool:
+    """
+    Check if files are of interest because they don't contain a string defined in a list present in VARIABLE
+    :return:
+    """
+    return all(element.lower() not in filename.lower() for element in USEFULL_SCAN)
 class Color:
     def __init__(self, list_color):
         self.list_color = list_color

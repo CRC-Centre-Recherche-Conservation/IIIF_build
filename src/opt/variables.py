@@ -7,6 +7,10 @@ SCANNERS = {'sXRF': 'Scanner de Spectrométrie par Fluorescence des rayons X',
             'HS_VNIR': 'Hyperspectral Visible et Proche Infrarouge',
             'MSP': 'Image Multispectrale'}
 
+#### USEFULL ####
+
+USEFULL_SCAN = ['video']
+
 #### LINKS ####
 # IIIF Manifest
 URI_CRC = "https://crc-centre-recherche-conservation.github.io/"

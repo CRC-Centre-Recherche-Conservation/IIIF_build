@@ -482,6 +482,7 @@ class SequenceIIIF:
         api_url = '/full/max/0/default.jpg'
         if self.format not in ['.jpeg', '.jpg'] and self.format is not None:
             api_url = api_url.replace('.jpg', '.' + self.extension)
+        print(self.project + '%2F' + self.filename + api_url)
         return DOMAIN_IIIF_HTTPS + ENDPOINT_API_IMG_3 + self.project + '%2F' + self.filename + api_url
 
     def build_url_V2(self):
@@ -526,7 +527,7 @@ class SequenceIIIF:
         return str(rectangle.x) + ',' + str(rectangle.y) + ',' + str(rectangle.w) + ',' + str(rectangle.h)
 
     @staticmethod
-    def get_mtda_xrf(url: str) -> str:
+    def get_mtda_xrf(url: str) -> list:
         """
         To get metadata for XRF scanning in image title.
         example:

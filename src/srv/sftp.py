@@ -10,6 +10,8 @@ from PIL import Image
 from collections import defaultdict, namedtuple
 from urllib.parse import urlparse
 
+from src.opt.tools import check_img_validity
+
 
 
 
@@ -96,11 +98,12 @@ class Sftp:
         # Search all id analysis
         for path, subdirs, files in os.walk(data_files, topdown=True):
             for name in files:
-                path_image = os.path.join(path, name)
-                search_path = re.search(anl_patter, path_image)
-                if search_path:
-                    id_ = search_path.group(0)
-                    idx_analysis[id_].append(path_image)
+                if check_img_validity(name): #check interest
+                    path_image = os.path.join(path, name)
+                    search_path = re.search(anl_patter, path_image)
+                    if search_path:
+                        id_ = search_path.group(0)
+                        idx_analysis[id_].append(path_image)
         return idx_analysis
 
     @classmethod
