@@ -4,10 +4,11 @@
 
 import os
 import re
+import logging
 import platform
 import paramiko
 from PIL import Image
-from collections import defaultdict, namedtuple
+from collections import defaultdict
 from urllib.parse import urlparse
 
 from src.opt.tools import check_img_validity
@@ -75,7 +76,9 @@ class Sftp:
                 print("upload completed")
 
         except Exception as err:
-            print(err)
+            if self.verbose:
+                print(err)
+            logging.error(f"Une erreur s'est produite lors du transfert : {str(source_local_path)} , {str(err)}", exc_info=True)
 
     def exists(self, path):
         try:
@@ -104,11 +107,14 @@ class Sftp:
                     if search_path:
                         id_ = search_path.group(0)
                         idx_analysis[id_].append(path_image)
+                else:
+                    logging.info(f"[REFUSED] Une image n'a pas été renseigné (Variable USEFULL_SCAN) : {str(name)}", exc_info=True)
         return idx_analysis
 
     @classmethod
     def upload_images(cls, project: str, id_: str, imgs: list, path_remote='/home/rayondemiel/iiif/images/', security=False, **kwargs):
 
+        logging.info(f"-------------- UPLOAD IMAGE SSH -----------------", exc_info=True)
         # export IIIFSRV_URL = 'sftp://user:password@host'
         sftp_url = os.environ.get("IIIFSRV_URL")  # URI format: sftp://user:password@host
 
@@ -128,6 +134,7 @@ class Sftp:
 
         # Connect to SFTP
         sftp.connect()
+        logging.info(f"Connection SSH to {str(parsed_url.hostname)} succeed!", exc_info=True)
 
         # build dir project
         path_project = os.path.join(path_remote, project)
@@ -140,6 +147,7 @@ class Sftp:
         elif sftp.exists(path_project) is False and security is False:
             sftp.sftp.mkdir(path_project)
 
+
         for img in imgs:
             if platform.system() == 'Windows':
                 name_file = img.split('\\')[-1]
@@ -148,12 +156,15 @@ class Sftp:
             sftp.upload(img, path_project + '/' + id_ + '&' + name_file.replace(' ', '_'))
 
         print(f'Successful uploads for all images of {id_}')
+        logging.info(f"Successful uploads for all images of {id_}", exc_info=True)
         # Disconnect from SFTP
         sftp.disconnect()
+        logging.info(f"Disconnected succeed", exc_info=True)
 
     @classmethod
     def get_list_dir(cls, project: str, path_remote='/home/rayondemiel/iiif/images/'):
 
+        logging.info(f"------------------- GET ALL FILES in SSH SRV --------------------------", exc_info=True)
         # export IIIFSRV_URL = 'sftp://user:password@host'
         sftp_url = os.environ.get("IIIFSRV_URL")  # URI format: sftp://user:password@host
 
@@ -171,6 +182,7 @@ class Sftp:
         )
 
         sftp.connect()
+        logging.info(f"Connection SSH to {str(parsed_url.hostname)} succeed!", exc_info=True)
         path_remote = path_remote + project
         file_list = list(sftp.listdir(path_remote))
 
@@ -185,11 +197,17 @@ class Sftp:
         # build dict with size for any images
         dict_files = {}
         for img in file_list:
-            size = get_size(path_remote + '/' + img)
-            dict_files[img] = size
+            try:
+                size = get_size(path_remote + '/' + img)
+                dict_files[img] = size
+            except Exception as e:
+                logging.error(f"Une erreur s'est produite : id: {str(img)} , {str(e)}", exc_info=True)
+
+        logging.info(f"Nombre d'élément: {str(len(dict_files))}", exc_info=True)
 
         del file_list
         sftp.disconnect()
+        logging.info(f"Disconnected succeed", exc_info=True)
         return dict_files
 
 
