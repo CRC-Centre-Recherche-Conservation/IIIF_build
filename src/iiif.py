@@ -574,7 +574,7 @@ class SequenceIIIF:
         return mtda
 
     @staticmethod
-    def get_mtda_hs(url: str) -> str:
+    def get_mtda_hs(url: str) -> list:
         """
         To get metadata for Hyperspectral scanning in image title.
 

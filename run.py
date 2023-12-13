@@ -2,6 +2,7 @@ import os
 import sys
 import socketserver
 import click
+import logging
 from collections import namedtuple
 from iiif_prezi3 import Canvas, ResourceItem, AnnotationPage, Annotation
 
@@ -13,7 +14,6 @@ from src.srv.localhost import MyHttpRequestHandler
 from src.srv.sftp import Sftp
 from src.opt.tools import get_default_project
 from path import CURRENT_PATH
-
 
 @click.group()
 def run_manifest():
@@ -48,9 +48,8 @@ def build_manifest(*args, project, **kwargs):
 
     ########################### Build Principal Manifest #####################################
 
-    # manifest = ManifestIIIF('https://emmsm.unicaen.fr/manifests/Avranches_BM_59.json')
-    manifest = ManifestIIIF(
-        'https://crc-centre-recherche-conservation.github.io/iiif/iiif/manifest/Avranches_BM_59.json')
+    manifest = ManifestIIIF('https://emmsm.unicaen.fr/manifests/Avranches_BM_59.json')
+    #manifest = ManifestIIIF('https://crc-centre-recherche-conservation.github.io/iiif/iiif/manifest/Avranches_BM_59.json')
     manifest.get_preconfig('/home/maxime/Bureau/projet_crc/IIIF_builder/config/config_example.yaml')
     manifest.build_manifest()
 
@@ -124,7 +123,7 @@ def build_manifest(*args, project, **kwargs):
             annotation = AnnotationIIIF(canvas=canvas, data=data_anno, uri=uri_canvas, **kwargs)
 
             forms = annotation.make_forms()
-            if n_anno > 10:
+            if n_anno > 0:
                 form_anno = Annotation(id=kwargs[
                                               'server'] + ENDPOINT_BASE + manifest.uri_basename + '&' + f"annotation/p{n_canvas:05}-image/anno_{n_anno:01}-svg",
                                        motivation="commenting",  # maybe other
@@ -179,8 +178,16 @@ def build_manifest(*args, project, **kwargs):
     # Upload files
     if kwargs['no_ssh'] is False:
         list_img = Sftp.prepare_images()
+        # Check if not space in filename
+        if not all(' ' not in img_str for img_str in list_img):
+            print('ERROR: You need to check filename of yours images. Space characters are prohibated !')
+            exit()
+
         for img in list_img:
-            Sftp.upload_images(project=project, id_=img, imgs=list_img[img], verbose=kwargs['verbose'])
+            try:
+                Sftp.upload_images(project=project, id_=img, imgs=list_img[img], verbose=kwargs['verbose'])
+            except Exception as e:
+                logging.error(f"Une erreur s'est produite : id: {str(img)} , {str(e)}", exc_info=True)
 
     # Get list of resources to srv
     list_img = Sftp.get_list_dir(project)
@@ -234,13 +241,16 @@ def build_manifest(*args, project, **kwargs):
                     # verify api parameters and format
                     url_image = canvas_api.check_size(service.api)
                     _format = canvas_api.build_format()
-                    resource_principal_img = ResourceItem(id=url_image,
+                    try:
+                        resource_principal_img = ResourceItem(id=url_image,
                                                           type=canvas['images'][0]['resource']['@type'],
                                                           format=_format if _format is not None else
                                                           canvas['images'][0]['resource']['format'],
                                                           # To get correct format, but if error you got original format
                                                           height=canvas['images'][0]['resource']['height'],
                                                           width=canvas['images'][0]['resource']['width'])
+                    except Exception as e:
+                        logging.error(f"Une erreur s'est produite : id: {str(url_image)} , {str(e)}", exc_info=True)
 
                     # Add service to image
                     ## API Presentation 2.0 - 2.1 (related to original manifest)
@@ -284,12 +294,15 @@ def build_manifest(*args, project, **kwargs):
 
                     url_image_scan = sequence_img.build_url_V3()
 
-
-                    resource_scan = ResourceItem(id=url_image_scan,
+                    try:
+                        resource_scan = ResourceItem(id=url_image_scan,
                                                  type='dctypes:Image',
                                                  format=sequence_img.format if sequence_img.format is not None else 'image/jpeg',
                                                  height=list_img[img][1],
                                                  width=list_img[img][0])
+                    except:
+                        print('ERROR')
+                        print(url_image_scan)
 
 
                     if analysis == 'sXRF':
@@ -365,4 +378,7 @@ def server_manifest():
 
 
 if __name__ == "__main__":
+    # Configuration du système de logs
+    logging.basicConfig(filename='output/logfile.txt', level=logging.INFO,
+                        format='%(asctime)s - %(levelname)s - %(message)s')
     run_manifest()

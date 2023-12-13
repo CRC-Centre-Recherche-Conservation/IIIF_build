@@ -28,7 +28,7 @@ class FormSVG(object):
                 # col References -> API image
                 self.image_url = image_url
                 # tuple (width, height)
-                self.image_size = self._get_dim_img()
+                self.image_size = self._get_iiif_dim()
 
             else:
                 raise ValueError("You need to indicate an URI of your licence. Need to start by http or https protocols")
@@ -56,13 +56,24 @@ class FormSVG(object):
 
     def _get_dim_img(self) -> namedtuple:
         """
-        To get image API dimension
+        To get image API dimension with PIL
         :param url: str, url image
         :return: tuple with width, height
         """
+        print('WARNING: DEPRECATED !')
         response = requests.get(self.image_url)
         img = Image.open(BytesIO(response.content))
         return img.size[0], img.size[1]
+
+    def _get_iiif_dim(self) -> namedtuple:
+        """
+        To get image API info dimension
+        :param url: str, url image
+        :return: tuple with width, height
+        """
+        info_url = '/'.join(self.image_url.split('/')[:-4]) + '/info.json'
+        json_resp = requests.get(info_url).json()
+        return json_resp['width'], json_resp['height']
 
     def _get_ratio(self, width: float or int, height: float or int) -> float or int:
         """
@@ -133,7 +144,8 @@ class Rectangle(FormSVG):
         to build svg object in html with the data of your annotation.
         :return: str, html <rect>
         """
-        return f"""<rect id="{str(self.id)}" x="{str(self.x)}" y="{str(self.y)}" width="{str(self.w)}" height="{str(self.h)}" stroke="{str("color")}" rx="20" ry="20" fill-opacity=0 stroke-width="2px"/>"""
+        #return f"""<rect id="{str(self.id)}" x="{str(self.x)}" y="{str(self.y)}" width="{str(self.w)}" height="{str(self.h)}" stroke="{str("color")}" rx="20" ry="20" fill-opacity=0 stroke-width="2px"/>"""
+        return f"""<path d="M{self.x},{self.y} L{self.x + self.w},{self.y} L{self.x + self.w},{self.y + self.h} L{self.x},{self.y + self.h} Z" fill-opacity="0" fill="#00f000" stroke="{str("color")}" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="10"/>"""
 
 
 class Marker(FormSVG):
