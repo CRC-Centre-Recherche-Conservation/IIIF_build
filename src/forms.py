@@ -74,7 +74,7 @@ class FormSVG(object):
         :return: tuple with width, height
         """
         info_url = '/'.join(self.image_url.split('/')[:-4]) + '/info.json'
-        json_resp = requests.get(info_url).json()
+        json_resp = requests.get(info_url, timeout=25).json()
         return json_resp['width'], json_resp['height']
 
     def _get_ratio(self, width: float or int, height: float or int) -> float or int:
@@ -102,6 +102,8 @@ class FormSVG(object):
         :param image_size: tuple,
         :return: None
         """
+        print(self.image_size)
+        print((canvas_w, canvas_h))
         if self.image_size != (canvas_w, canvas_h):
             # get tuple with original dimension
             self.dim_img_origin = (canvas_w, canvas_h)
@@ -137,9 +139,13 @@ class Rectangle(FormSVG):
         """
         assert isinstance(self.ratio, tuple), "Ratio attribute is None. You need to get a tuple (width, height)"
         self.x *= self.ratio[0]
-        self.w *= self.ratio[0]
+        self.x = int(round(self.x))
         self.y *= self.ratio[1]
+        self.y = int(round(self.y))
+        self.w *= self.ratio[0]
+        self.w = int(round(self.w))
         self.h *= self.ratio[1]
+        self.h = int(round(self.h))
     def get_svg(self):
         """
         to build svg object in html with the data of your annotation.
@@ -172,7 +178,9 @@ class Marker(FormSVG):
         """
         assert isinstance(self.ratio, tuple), "Ratio attribute is None. You need to get a tuple (width, height)"
         self.x *= self.ratio[0]
+        self.x = int(round(self.x))
         self.y *= self.ratio[1]
+        self.x = int(round(self.x))
 
     def get_svg(self):
         """
