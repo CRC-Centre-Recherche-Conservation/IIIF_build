@@ -206,7 +206,6 @@ class ManifestIIIF(IIIF):
             id=url,
             label=self.label,
             rights=self.rights[1],
-            behavior=["paged"],
             viewingDirection=self.json['viewingDirection'],
             summary=self.description,
             metadata=self.metadata,
