@@ -20,7 +20,7 @@ class IndexConfig:
                     self.ents = json_file['taxonomy']['descriptors']
                     for ent in self.ents:
                         self.list_colors[ent['targetName']] = ent['targetColor']
-                    del json
+                    del json_file
                     self.status = True
             # If the script don't find 'manuscript.json file in config folder
             else:
