@@ -29,9 +29,9 @@ class FormSVG(object):
                 self.image_url = image_url
                 # tuple (width, height)
                 self.image_size = self._get_iiif_dim()
-
             else:
-                raise ValueError("You need to indicate an URI of your licence. Need to start by http or https protocols")
+                raise ValueError("You need to indicate an URI of your licence. "
+                                 "Need to start by http or https protocols")
 
     @property
     def redimension(self) -> bool:
@@ -40,7 +40,8 @@ class FormSVG(object):
     @redimension.setter
     def redimension(self, statut):
         """
-        Property function to return a ratio when image API dimension not correspond to the image dimension in the manifest.
+        Property function to return a ratio when image API dimension not correspond to the image
+        dimension in the manifest.
         :param statut: bool
         :return: None
         """
@@ -52,6 +53,7 @@ class FormSVG(object):
                 if self.verbose:
                     print(f'Redimension of image {str(self.id)}')
                 self.ratio = self._get_ratio(self.dim_img_origin[0], self.dim_img_origin[1])
+                print(self.ratio)
                 self.fit()
 
     def _get_dim_img(self) -> namedtuple:
@@ -83,14 +85,16 @@ class FormSVG(object):
         :return:
         """
         assert isinstance(width, (float,
-                                  int)), "Your change status of redimension, but the script can't get the good values [width] of original images."
+                                  int)), ("Your change status of redimension, but the script can't get the good values "
+                                          "[width] of original images.")
         assert isinstance(height, (float,
-                                   int)), "Your change status of redimension, but the script can't get the good values [height] of original images."
+                                   int)), ("Your change status of redimension, but the script can't get the good values "
+                                           "[height] of original images.")
         ratio_w = width / self.image_size[0]
         ratio_h = height / self.image_size[1]
         return ratio_w, ratio_h
 
-    def check_dim_manifest(self, canvas_w: int, canvas_h: int, image_size=None):
+    def check_dim_manifest(self, canvas_w: int, canvas_h: int):
         """
         To get dimension of original image.
         :param canvas_w: int, canvas width
@@ -98,10 +102,7 @@ class FormSVG(object):
         :param image_size: tuple,
         :return: None
         """
-        if image_size is not None:
-            assert isinstance(image_size, tuple), '[image_size] need to be a tuple (width, height)'
-            self.image_size = image_size
-        if self.image_size[0] != canvas_w or self.image_size[1] != canvas_h:
+        if self.image_size != (canvas_w, canvas_h):
             # get tuple with original dimension
             self.dim_img_origin = (canvas_w, canvas_h)
             # Indication of change status -> run property function

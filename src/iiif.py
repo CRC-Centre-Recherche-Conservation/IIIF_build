@@ -118,7 +118,8 @@ class ManifestIIIF(IIIF):
 
             if config_yaml['manifest'].upper() != "DEFAULT":
                 self.uri_basename = config_yaml['manifest'].replace(' ', '_')
-                self.uri_manifest = DOMAIN_IIIF_HTTPS + ENDPOINT_MANIFEST + config_yaml['manifest'].replace(' ', '_') + '.json'
+                self.uri_manifest = DOMAIN_IIIF_HTTPS + ENDPOINT_MANIFEST + config_yaml['manifest'].replace(' ',
+                                                                                                            '_') + '.json'
                 if self.verbose:
                     print(self.uri_manifest)
 
@@ -517,11 +518,11 @@ class SequenceIIIF:
 
         rectangle = Rectangle(_id=row['Name'], x=row['X'], y=row['Y'],
                               w=row['W'], h=row['H'], verbose=self.verbose)
-        rectangle.image_size = ()
+
+        rectangle.image_size = image_size
         # check dimension image and form and fit
         rectangle.check_dim_manifest(canvas_h=canvas.height,
-                                     canvas_w=canvas.width,
-                                     image_size=image_size)
+                                     canvas_w=canvas.width)
         # get xywh dimension
         return str(rectangle.x) + ',' + str(rectangle.y) + ',' + str(rectangle.w) + ',' + str(rectangle.h)
 
@@ -678,6 +679,7 @@ class SequenceIIIF:
                     f"Soustraction de la ligne de base: Entre {continuum_match.group(1)} et {continuum_match.group(2)}.")
 
         return mtda
+
     def get_mtda_msp(self, url: str):
         """
         To get metadata for Multispectral scanning in image title.
@@ -686,8 +688,6 @@ class SequenceIIIF:
         """
         methods = ['IR', 'IRFC', 'UVFC', 'VIS', 'UVF', 'UVF2', 'UVR']
         pass
-
-
 
 # pour xrf et hyperspectra
 # https://iiif.io/api/cookbook/recipe/0033-choice/
