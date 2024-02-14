@@ -379,7 +379,10 @@ class AnnotationIIIF:
                 rectangle = Rectangle(_id=self.data['Name'], image_url=self.uri, x=self.data['Coordinates']['x'],
                                       y=self.data['Coordinates']['y'], w=self.data['Coordinates']['w'],
                                       h=self.data['Coordinates']['h'], verbose=self.verbose)
+
                 # check dimension image and form
+                rectangle.image_size = (int(self.data['Dimensions']['width']), int(self.data['Dimensions']['height']))
+
                 rectangle.check_dim_manifest(canvas_h=self.canvas['images'][0]['resource']['height'],
                                              canvas_w=self.canvas['images'][0]['resource']['width'])
                 dimension = rectangle.dim_img_origin if rectangle.dim_img_origin is not None else rectangle.image_size
@@ -393,6 +396,9 @@ class AnnotationIIIF:
                 marker = Marker(_id=self.data['Name'], image_url=self.uri, x=self.data['Coordinates']['x'],
                                 y=self.data['Coordinates']['y'], verbose=self.verbose)
                 # check dimension image and form
+                marker.image_size = (int(self.data['Dimensions']['width']),
+                                             int(self.data['Dimensions']['height']))
+
                 marker.check_dim_manifest(canvas_h=self.canvas['images'][0]['resource']['height'],
                                           canvas_w=self.canvas['images'][0]['resource']['width'])
                 dimension = marker.dim_img_origin if marker.dim_img_origin is not None else marker.image_size
@@ -463,6 +469,8 @@ class SequenceIIIF:
         {https}://{domain}/{endpoint}/{levelAPI}/{project}2%F{id_image}
         :return: str, uri
         """
+        if self.verbose:
+            print('URI : ' + DOMAIN_IIIF_HTTPS + ENDPOINT_API_IMG_3 + self.project + '%2F' + self.filename)
         return DOMAIN_IIIF_HTTPS + ENDPOINT_API_IMG_3 + self.project + '%2F' + self.filename
 
     def build_uri_info(self):
@@ -471,6 +479,8 @@ class SequenceIIIF:
         {https}://{domain}/{endpoint}/{levelAPI}/{project}2%F{id_image}/info.json
         :return: str, uri
         """
+        if self.verbose:
+            print('URI info : ' + DOMAIN_IIIF_HTTPS + ENDPOINT_API_IMG_3 + self.project + '%2F' + self.filename + '/info.json')
         return DOMAIN_IIIF_HTTPS + ENDPOINT_API_IMG_3 + self.project + '%2F' + self.filename + '/info.json'
 
     def build_url_V3(self):
@@ -482,7 +492,8 @@ class SequenceIIIF:
         api_url = '/full/max/0/default.jpg'
         if self.format not in ['.jpeg', '.jpg'] and self.format is not None:
             api_url = api_url.replace('.jpg', '.' + self.extension)
-        print(self.project + '%2F' + self.filename + api_url)
+        if self.verbose:
+            print('URL image V3 : ' + DOMAIN_IIIF_HTTPS + ENDPOINT_API_IMG_3 + self.project + '%2F' + self.filename + api_url)
         return DOMAIN_IIIF_HTTPS + ENDPOINT_API_IMG_3 + self.project + '%2F' + self.filename + api_url
 
     def build_url_V2(self):
@@ -494,6 +505,8 @@ class SequenceIIIF:
         api_url = '/full/max/0/default.jpg'
         if self.extension not in ['jpeg', 'jpg'] and self.extension is not None:
             api_url = api_url.replace('.jpg', '.' + self.extension)
+        if self.verbose:
+            print('URL image V2 : ' + DOMAIN_IIIF_HTTPS + ENDPOINT_API_IMG_2 + self.project + '%2F' + self.filename + api_url)
         return DOMAIN_IIIF_HTTPS + ENDPOINT_API_IMG_2 + self.project + '%2F' + self.filename + api_url
 
     def build_format(self) -> str or None:
@@ -507,7 +520,7 @@ class SequenceIIIF:
         except KeyError:
             return None, None
 
-    def get_xwyh(self, canvas, row, image_size):
+    def get_xywh(self, canvas, row, image_size):
         """
 
         :param canvas: Canvas, canvas image configuration
@@ -527,7 +540,7 @@ class SequenceIIIF:
         return str(rectangle.x) + ',' + str(rectangle.y) + ',' + str(rectangle.w) + ',' + str(rectangle.h)
 
     @staticmethod
-    def get_mtda_xrf(url: str) -> list:
+    def get_mtda_xrf(url: str) -> (list, str):
         """
         To get metadata for XRF scanning in image title.
         example:
@@ -536,10 +549,11 @@ class SequenceIIIF:
         sXRF_5&Ms59-f13v_deconv_sansHg-Cu.tif
 
         :param url: url: str, url of image
-        :return:
+        :return: List of metadata, string Chemical Element ID
         """
         # list of metadata
         mtda = []
+        element = 'unknow'
 
         url_parse = urlparse(url).path
 
@@ -558,20 +572,22 @@ class SequenceIIIF:
             mtda.append('Méthodologie: ' + 'Déconvolution')
         # getting elements
         if el_chem_match:
-            el_chem_txt = el_chem_match.group(1)
-            mtda.append(f'Élement chimique: {PERIODIC_TAB_FR[el_chem_txt]} ({el_chem_txt})')
+            element = el_chem_match.group(1)
+            mtda.append(f'Élement chimique: {PERIODIC_TAB_FR[element]} ({element})')
         # get without element (Hg-sans-Cu) -> Cu
         elif without_el_match:
             el_without_txt = without_el_match.group(2)
             eliminated = without_el_match.group(1)
+            element = el_without_txt + "_without_" + eliminated
             mtda.append(f'Élement chimique: {PERIODIC_TAB_FR[el_without_txt]} ({el_without_txt}) \n'
                         f'Élimination: {PERIODIC_TAB_FR[eliminated]} ({eliminated})')
         # getting limits
         if lim_match:
             limit = lim_match.group(1)
             mtda.append(f'Limite (par coups): {limit}')
+            element += f'_lim_{limit}'
 
-        return mtda
+        return mtda, element
 
     @staticmethod
     def get_mtda_hs(url: str) -> list:
@@ -590,6 +606,7 @@ class SequenceIIIF:
 
         # list mtda
         mtda = []
+        element = 'unknow'
 
         # No chemical element, so lower
         url_parse = urlparse(url).path.lower()
@@ -599,14 +616,17 @@ class SequenceIIIF:
         dist_match = dist.search(url_parse)
         if dist_match:
             mtda.append(f"Distance (objet/objectif): {dist_match.group(1)}")
+            element += f'dist_{dist_match.group(1)}'
 
         # Reference spectrum
         objet = url_parse.split('_')[-1].split('.')[0]
+        element = objet
         if not objet.startswith(('derivate', 'mnf', 'pca')):
             try:
                 mtda.append(f"Spectre de référence: {objet.replace('-', ' ')}")
             except IndexError:
                 mtda.append(f"Spectre de référence: {objet.replace('-', ' ')}")
+
 
         # Mapping processing (can have multiple processing)
         techs = {'_mtmf_': 'Mixture Tuned Matched Filtering',
@@ -619,6 +639,7 @@ class SequenceIIIF:
         for tech_key, tech_name in techs.items():
             if tech_key in url_parse:
                 n_tech.append(tech_name)
+                element += f'-{tech_key.replace("_", "")}'
         if len(n_tech) < 0:
             mtda.append(f"Traitements pour la cartographie: {', '.join(n_tech)}")
 
@@ -663,6 +684,7 @@ class SequenceIIIF:
         # Pixel aggregation
         if 'pixel_aggregate' in url_parse:
             mtda.append('Aggrégation de pixels: Oui')
+            element += '_AggregPx'
         else:
             mtda.append('Aggrégation de pixels: Non')
 
@@ -678,7 +700,7 @@ class SequenceIIIF:
                 mtda.append(
                     f"Soustraction de la ligne de base: Entre {continuum_match.group(1)} et {continuum_match.group(2)}.")
 
-        return mtda
+        return mtda, element
 
     def get_mtda_msp(self, url: str):
         """
@@ -692,6 +714,4 @@ class SequenceIIIF:
 # pour xrf et hyperspectra
 # https://iiif.io/api/cookbook/recipe/0033-choice/
 
-
-# https://iiif.io/api/cookbook/recipe/0036-composition-from-multiple-images/ annotation pour les photos de miscroscopiues
 # "target": "https://iiif.io/api/cookbook/recipe/0036-composition-from-multiple-images/canvas/p1#xywh=3949,994,1091,1232" -> en gros selection via xywh

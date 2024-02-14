@@ -1,9 +1,10 @@
 import os
 import sys
 import socketserver
-import click
 import logging
 from collections import namedtuple
+
+import click
 from iiif_prezi3 import Canvas, ResourceItem, AnnotationPage, Annotation
 
 from src.data import DataAnnotations
@@ -17,6 +18,7 @@ from path import CURRENT_PATH
 
 @click.group()
 def run_manifest():
+    """Click group to run functions"""
     pass
 
 
@@ -209,14 +211,14 @@ def build_manifest(*args, project, **kwargs):
 
             canvas_images = {}
 
-            #print(list_analysis)
+            # iterating
             for index, row in list_analysis.sort_values(by='Reference.1').iterrows():
 
                 # Page annotation for canvas
                 anno_page_scan = AnnotationPage(
                     id=kwargs['server'] + ENDPOINT_BASE + manifest_scan.uri_basename + '&' + f"page/p{str(index)}/1")
 
-
+                #get variable
                 label_id = row['Name']
                 img_url_1 = row['Reference.1']
 
@@ -278,6 +280,7 @@ def build_manifest(*args, project, **kwargs):
                     # Add new canvas to dict
                     canvas_images[img_url_1] = canvas_img
 
+                # To future layers
                 else:
                     canvas_img = canvas_images[img_url_1]
 
@@ -289,6 +292,7 @@ def build_manifest(*args, project, **kwargs):
                     error.n += 1
                     error.list_id.append(row['Name'])
 
+                #list_img[name_img_layer] = (w, h)
                 for img in idx_img:
                     sequence_img = SequenceIIIF(project=project, filename=img, **kwargs)
 
@@ -300,20 +304,19 @@ def build_manifest(*args, project, **kwargs):
                                                  format=sequence_img.format if sequence_img.format is not None else 'image/jpeg',
                                                  height=list_img[img][1],
                                                  width=list_img[img][0])
-                    except:
+                    except Exception:
                         print('ERROR')
                         print(url_image_scan)
 
 
                     if analysis == 'sXRF':
                         try:
-                            labels = sequence_img.get_mtda_xrf(url_image_scan)
+                            labels, element = sequence_img.get_mtda_xrf(url_image_scan)
                         except KeyError:
                             print(url_image_scan)
                     elif analysis == 'HS_SWIR' or analysis == 'HS_VNIR':
-                        labels = sequence_img.get_mtda_hs(url_image_scan)
-                    for label in labels:
-                        resource_scan.add_label(str(label), language='fr')
+                        labels, element = sequence_img.get_mtda_hs(url_image_scan)
+                    resource_scan.add_label(' | '.join(labels), language='fr')
 
                     # Services
                     resource_scan.make_service(id=sequence_img.build_uri(),
@@ -321,13 +324,19 @@ def build_manifest(*args, project, **kwargs):
                                                profile='level2')
 
                     # Add to annotation
-                    anno_img_scan = Annotation(id=kwargs['server'] + f"annotation/{label_id}-main-images",
+
+                    ## tuple origin size
+                    t_dim = (int(row['Dimensions'].split('x')[0].strip()),int(row['Dimensions'].split('x')[1].strip()))
+
+                    anno_img_scan = Annotation(id=kwargs['server'] + f"annotation/{label_id}-alt-images-{element}",
                                                motivation="painting",
                                                body=resource_scan,
                                                # list_img -> correspond to dict parsing files sftp
-                                               target=canvas_img.id + '#' + sequence_img.get_xwyh(canvas=canvas_img,
+                                               target=canvas_img.id + '#' + sequence_img.get_xywh(canvas=canvas_img,
                                                                                                   row=row,
-                                                                                                  image_size=list_img[img]))
+                                                                                                  image_size=t_dim))
+                    if kwargs['verbose']:
+                        print("tags urls :" + anno_img_scan.target)
                     # Add annotation to anno page
                     anno_page_scan.add_item(anno_img_scan)
 
@@ -335,6 +344,7 @@ def build_manifest(*args, project, **kwargs):
                 canvas_img.add_item(anno_page_scan)
                 # Add update canvas
                 canvas_images[img_url_1] = canvas_img
+
             # Add canvas in manifest
             for url_base in canvas_images:
                 manifest_scan.manifest.add_item(canvas_images[url_base])
@@ -366,9 +376,9 @@ def server_manifest():
     try:
         my_server = socketserver.TCPServer(("", PORT), handler_object)
     except OSError:
-        PORT = PORT + 1
+        PORT += 1
         my_server = socketserver.TCPServer(("", PORT), handler_object)
-    print('Listening on http://localhost:%s' % PORT)
+    print("Listening on http://localhost:%s" % PORT)
     # Star the server
     try:
         my_server.serve_forever()
