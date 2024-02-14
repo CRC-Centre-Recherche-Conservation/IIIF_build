@@ -56,7 +56,6 @@ class FormSVG(object):
                 if self.verbose:
                     print(f'Redimension of image {str(self.id)}')
                 self.ratio = self._get_ratio(self.dim_img_origin[0], self.dim_img_origin[1])
-                print(self.ratio)
                 self.fit()
 
     def _get_dim_img(self) -> namedtuple:
@@ -106,8 +105,6 @@ class FormSVG(object):
         :param image_size: tuple(w,h),
         :return: None
         """
-        print(self.image_size)
-        print((canvas_w, canvas_h))
         if self.image_size != (canvas_w, canvas_h):
             # get tuple with original dimension
             self.dim_img_origin = (canvas_w, canvas_h)
