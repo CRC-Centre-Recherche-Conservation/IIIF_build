@@ -22,7 +22,10 @@ class FormSVG(object):
         self.id = _id
         # Check with Size with request
         self.verbose = kwargs['verbose']
-        if image_url is not None:
+
+        # Disable because it's better to use the dimensions indicated in the csv exported from AnnotateOn.
+        # Because info.json can change over time. More stability
+        """if image_url is not None:
             assert isinstance(image_url, str), "Variable [image_url] must be of type string to be used."
             if image_url.startswith('https://') or image_url.startswith('http://'):
                 # col References -> API image
@@ -31,7 +34,7 @@ class FormSVG(object):
                 self.image_size = self._get_iiif_dim()
             else:
                 raise ValueError("You need to indicate an URI of your licence. "
-                                 "Need to start by http or https protocols")
+                                 "Need to start by http or https protocols")"""
 
     @property
     def redimension(self) -> bool:
@@ -88,8 +91,9 @@ class FormSVG(object):
                                   int)), ("Your change status of redimension, but the script can't get the good values "
                                           "[width] of original images.")
         assert isinstance(height, (float,
-                                   int)), ("Your change status of redimension, but the script can't get the good values "
-                                           "[height] of original images.")
+                                   int)), (
+            "Your change status of redimension, but the script can't get the good values "
+            "[height] of original images.")
         ratio_w = width / self.image_size[0]
         ratio_h = height / self.image_size[1]
         return ratio_w, ratio_h
@@ -99,7 +103,7 @@ class FormSVG(object):
         To get dimension of original image.
         :param canvas_w: int, canvas width
         :param canvas_h: int, canvas height
-        :param image_size: tuple,
+        :param image_size: tuple(w,h),
         :return: None
         """
         print(self.image_size)
@@ -146,12 +150,13 @@ class Rectangle(FormSVG):
         self.w = int(round(self.w))
         self.h *= self.ratio[1]
         self.h = int(round(self.h))
+
     def get_svg(self):
         """
         to build svg object in html with the data of your annotation.
         :return: str, html <rect>
         """
-        #return f"""<rect id="{str(self.id)}" x="{str(self.x)}" y="{str(self.y)}" width="{str(self.w)}" height="{str(self.h)}" stroke="{str("color")}" rx="20" ry="20" fill-opacity=0 stroke-width="2px"/>"""
+        # return f"""<rect id="{str(self.id)}" x="{str(self.x)}" y="{str(self.y)}" width="{str(self.w)}" height="{str(self.h)}" stroke="{str("color")}" rx="20" ry="20" fill-opacity=0 stroke-width="2px"/>"""
         return f"""<path d="M{self.x},{self.y} L{self.x + self.w},{self.y} L{self.x + self.w},{self.y + self.h} L{self.x},{self.y + self.h} Z" fill-opacity="0" fill="#00f000" stroke="{str("color")}" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="10"/>"""
 
 
