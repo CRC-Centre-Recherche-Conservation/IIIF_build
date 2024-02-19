@@ -13,8 +13,8 @@ USEFULL_SCAN = ['video']
 
 #### LINKS ####
 # IIIF Manifest
-URI_CRC = "https://crc-centre-recherche-conservation.github.io/"
-ENDPOINT_MANIFEST = "iiif/iiif/manifest/"
+URI_CRC = "https://crc-centre-recherche-conservation.github.io/iiif/"
+ENDPOINT_MANIFEST = "iiif/manifest/"
 ENDPOINT_BASE = "iiif/"
 
 # IIIF SRV

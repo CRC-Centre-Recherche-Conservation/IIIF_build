@@ -300,7 +300,7 @@ def build_manifest(*args, project, **kwargs):
 
                     try:
                         resource_scan = ResourceItem(id=url_image_scan,
-                                                 type='dctypes:Image',
+                                                 type='Image',
                                                  format=sequence_img.format if sequence_img.format is not None else 'image/jpeg',
                                                  height=list_img[img][1],
                                                  width=list_img[img][0])
@@ -332,7 +332,7 @@ def build_manifest(*args, project, **kwargs):
                                                motivation="painting",
                                                body=resource_scan,
                                                # list_img -> correspond to dict parsing files sftp
-                                               target=canvas_img.id + '#' + sequence_img.get_xywh(canvas=canvas_img,
+                                               target=canvas_img.id + '#xywh=' + sequence_img.get_xywh(canvas=canvas_img,
                                                                                                   row=row,
                                                                                                   image_size=t_dim))
                     if kwargs['verbose']:

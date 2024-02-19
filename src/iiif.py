@@ -77,7 +77,6 @@ class ManifestIIIF(IIIF):
         """
         super().__init__(
             uri=uri, **kwargs)
-        self.label = self._build_label()
         # Variable for new manifest
         self.uri_basename = self._build_uri_basename()
         self.uri_manifest = self._build_uri()
@@ -85,8 +84,13 @@ class ManifestIIIF(IIIF):
     def _print_json(self):
         return self.manifest.json(indent=2, ensure_ascii=False)
 
-    def _build_label(self):
-        return self.json['label'] + ", analyses physico-chimique @CRC"
+    def build_label(self, ext_name: str):
+        """
+        function to update label manifest with extension
+        :param ext_name: str, name
+        :return: update name label manifest
+        """
+        self.json['label'] += " " + ext_name
 
     def _build_uri_basename(self):
         return str(self.uri.split('/')[-1].replace('.json', '') + '_CRC')
